@@ -62,6 +62,19 @@ function clip(s: string, n: number): string {
   return t.length > n ? t.slice(0, n) + '…' : t;
 }
 
+/** Short single-glyph labels for the finale stat keys endTally emits — the SSOT
+ *  shared by every renderer (TUI panel, TUI card, SVG poster) so the abbreviated
+ *  「包括 8读·6改…」 vocabulary can't silently diverge across the three seams. */
+export const STAT_SHORT: Record<string, string> = {
+  reads: '读',
+  edits: '改',
+  writes: '写',
+  commands: '命令',
+  helpers: '帮手',
+  errors: '报错没停',
+  wipes: '清洗',
+};
+
 /**
  * Compute the finale tally for a session. All counts are real aggregates:
  *   - hero  = Σ tool callCount (every tool the agent invoked)

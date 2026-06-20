@@ -10,16 +10,9 @@
 // Pure + presentation-free of colour/layout: just the canonical text content.
 // ============================================================================
 import type { PanelModel } from '../tui/viewModel.ts';
+import { STAT_SHORT } from '../model/tally.ts';
 
-export const STAT_SHORT: Record<string, string> = {
-  reads: '读',
-  edits: '改',
-  writes: '写',
-  commands: '命令',
-  helpers: '帮手',
-  errors: '报错没停',
-  wipes: '清洗',
-};
+export { STAT_SHORT }; // re-exported for callers that already source it from cardFace
 
 /** Collapse whitespace + clip to n chars with an ellipsis (visible-string form). */
 export function clipFace(s: string, n: number): string {

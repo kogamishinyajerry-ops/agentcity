@@ -15,16 +15,7 @@ import { Box, Text } from 'ink';
 import type { PanelModel } from './viewModel.ts';
 import { bigNumber } from './bignum.ts';
 import { INK } from './palette.ts';
-
-const STAT_SHORT: Record<string, string> = {
-  reads: '读',
-  edits: '改',
-  writes: '写',
-  commands: '命令',
-  helpers: '帮手',
-  errors: '报错没停',
-  wipes: '清洗',
-};
+import { STAT_SHORT } from '../model/tally.ts';
 
 function clip(s: string, n: number): string {
   const t = s.replace(/\s+/g, ' ').trim();

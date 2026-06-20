@@ -13,19 +13,10 @@ import type { BarRow, PanelModel } from './viewModel.ts';
 import { barString } from './bars.ts';
 import { INK } from './palette.ts';
 import { clipCols } from './width.ts';
+import { STAT_SHORT } from '../model/tally.ts';
 
 const BAR_WIDTH = 24;
 const LABEL_WIDTH = 13;
-
-const STAT_SHORT: Record<string, string> = {
-  reads: '读',
-  edits: '改',
-  writes: '写',
-  commands: '命令',
-  helpers: '帮手',
-  errors: '报错没停',
-  wipes: '清洗',
-};
 
 function accentColor(a: SpotlightAccent): string | undefined {
   return a === 'human' ? INK.human : a === 'tool' ? INK.tool : undefined;
