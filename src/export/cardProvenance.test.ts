@@ -3,7 +3,7 @@
 // visible face, not just the hero numeral. A real round-trip runs behind the
 // fixture gate where the private sample is present.
 import { describe, expect, it } from 'vitest';
-import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { encodeReceipt, makeProvenance, toReceipt, type CardMetrics } from '../model/provenance.ts';
@@ -193,6 +193,83 @@ describe('enumerateInputs / hashInputSet (multi-agent input set is bound)', () =
     } finally {
       rmSync(d, { recursive: true, force: true });
     }
+  });
+
+  it('terminates on a self-referential symlink cycle in the subagents tree', () => {
+    const d = mkdtempSync(join(tmpdir(), 'ac-prov-sym-'));
+    try {
+      const main = join(d, 'sess.jsonl');
+      writeFileSync(main, '{}\n');
+      const sub = join(d, 'sess', 'subagents');
+      mkdirSync(sub, { recursive: true });
+      writeFileSync(join(sub, 'agent-a.jsonl'), 'A\n');
+      let linked = true;
+      try {
+        symlinkSync(sub, join(sub, 'loop')); // sub/loop -> sub : would loop without the realpath guard
+      } catch {
+        linked = false; // some envs forbid symlink creation — the normal walk still validates
+      }
+      // The call returning at all proves it terminated (the guard broke the cycle).
+      const e = enumerateInputs(main);
+      expect(e.files.some((f) => f.rel.endsWith('agent-a.jsonl'))).toBe(true);
+      if (linked) expect(e.files.length).toBeLessThan(50); // no runaway re-descent of the alias
+    } finally {
+      rmSync(d, { recursive: true, force: true });
+    }
+  });
+});
+
+// Fuzz the completeness gate's core invariant: ANY structural change to a genuine
+// card (a non-whitespace edit, or an injected element) must fail verification — only
+// trailing-whitespace / line-ending re-saves may still pass. A single false-accept
+// here = a forgeable card. Deterministic (seeded LCG) so a failure is reproducible.
+describe('verifyAgainstTranscript — fuzz: no structural mutation is a false accept', () => {
+  const { model, provenance, svg } = build();
+  const rec = { provenance, model };
+  // seeded LCG → reproducible "randomness"
+  let s = 0x2545f4914f6cdd1d % 2147483647;
+  const rnd = () => (s = (s * 48271) % 2147483647) / 2147483647;
+  const nonWs: number[] = [];
+  for (let i = 0; i < svg.length; i++) if (!/\s/.test(svg[i])) nonWs.push(i);
+
+  it('200 single-char edits at visible/structural bytes all fail', () => {
+    let accepts = 0;
+    for (let t = 0; t < 200; t++) {
+      const pos = nonWs[Math.floor(rnd() * nonWs.length)];
+      const orig = svg[pos];
+      const repl = /[0-9]/.test(orig) ? String((Number(orig) + 1) % 10) : orig === 'X' ? 'Y' : 'X';
+      const mutated = svg.slice(0, pos) + repl + svg.slice(pos + 1);
+      if (mutated === svg) continue;
+      if (verifyAgainstTranscript(mutated, rec).ok) accepts++;
+    }
+    expect(accepts).toBe(0);
+  });
+
+  it('100 injected elements at random positions all fail', () => {
+    const payloads = [
+      '<text x="60" y="120" font-size="40">我赚了一百万</text>',
+      '<text id="ac-hero" x="60" y="252">999999</text>',
+      '<foreignObject x="0" y="0" width="9" height="9"><div xmlns="http://www.w3.org/1999/xhtml">假</div></foreignObject>',
+      '<tspan>x</tspan>',
+    ];
+    // inject only between top-level elements (after a '>' that precedes a '<') so the
+    // SVG stays parseable — the strongest test (a malformed SVG fails trivially).
+    const slots: number[] = [];
+    for (let i = 0; i < svg.length - 1; i++) if (svg[i] === '>' && svg[i + 1] === '<') slots.push(i + 1);
+    let accepts = 0;
+    for (let t = 0; t < 100; t++) {
+      const at = slots[Math.floor(rnd() * slots.length)];
+      const pay = payloads[Math.floor(rnd() * payloads.length)];
+      const mutated = svg.slice(0, at) + pay + svg.slice(at);
+      if (verifyAgainstTranscript(mutated, rec).ok) accepts++;
+    }
+    expect(accepts).toBe(0);
+  });
+
+  it('benign re-saves (CRLF / trailing newline / trailing line-spaces) still verify', () => {
+    expect(verifyAgainstTranscript(svg + '\n', rec).ok).toBe(true);
+    expect(verifyAgainstTranscript(svg.replace(/\n/g, '\r\n'), rec).ok).toBe(true);
+    expect(verifyAgainstTranscript(svg.replace(/\n/g, '  \n') + '\n\n', rec).ok).toBe(true);
   });
 });
 

@@ -17,7 +17,7 @@
 //      makes the card differ from the canonical re-render → ✗. The per-field
 //      cardFace checks remain only as friendly diagnostics for single-field edits.
 // ============================================================================
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { loadSession } from '../tui/loadSession.ts';
 import { buildPanelModel, type PanelModel } from '../tui/viewModel.ts';
@@ -61,8 +61,19 @@ function isDir(p: string): boolean {
   }
 }
 
-/** Recursively collect every regular file under `dir`, sorted (deterministic). */
-function walkFiles(dir: string, acc: string[]): void {
+/** Recursively collect every regular file under `dir`, sorted (deterministic).
+ *  Follows symlinks (to match the ingest pipeline, so the hashed set == the read
+ *  set) but guards against cycles with a realpath visited-set — a self-referential
+ *  symlink in a hostile/pathological tree can't loop or blow the stack. */
+function walkFiles(dir: string, acc: string[], seen: Set<string>): void {
+  let real: string;
+  try {
+    real = realpathSync(dir);
+  } catch {
+    return;
+  }
+  if (seen.has(real)) return; // already walked this real dir (cycle or alias)
+  seen.add(real);
   let entries: string[];
   try {
     entries = readdirSync(dir).sort();
@@ -71,7 +82,7 @@ function walkFiles(dir: string, acc: string[]): void {
   }
   for (const entry of entries) {
     const p = join(dir, entry);
-    if (isDir(p)) walkFiles(p, acc);
+    if (isDir(p)) walkFiles(p, acc, seen);
     else acc.push(p);
   }
 }
@@ -86,7 +97,7 @@ export function enumerateInputs(transcriptPath: string): { mode: ProvMode; files
   const abs: string[] = [mainAbs];
   if (mode === 'bytes') {
     const sessionBase = basename(transcriptPath).replace(/\.jsonl$/i, '');
-    walkFiles(join(dirname(transcriptPath), sessionBase, 'subagents'), abs);
+    walkFiles(join(dirname(transcriptPath), sessionBase, 'subagents'), abs, new Set());
   }
   const files = abs
     .map((a) => ({ rel: relative(root, resolve(a)), abs: a }))
