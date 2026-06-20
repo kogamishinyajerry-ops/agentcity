@@ -4,17 +4,23 @@
 // via ink-testing-library (the dev loop the web renderer couldn't close).
 import { render } from 'ink-testing-library';
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import type { ParsedSession } from '../model/types.ts';
 import { buildPanelModel } from './viewModel.ts';
 import { WorkCard } from './WorkCard.tsx';
 
-const session = JSON.parse(readFileSync('sample/parsed-sample.json', 'utf8')) as ParsedSession;
+// Fixture is gitignored (real transcript) → skip cleanly when absent (fresh clone).
+const SAMPLE = 'sample/parsed-sample.json';
+const present = existsSync(SAMPLE);
+const session = present
+  ? (JSON.parse(readFileSync(SAMPLE, 'utf8')) as ParsedSession)
+  : (null as unknown as ParsedSession);
+// Derived at module level behind `present` — `describe.skipIf` still runs the
+// suite body to collect tests, so the render can't live there (would throw on null).
+const model = present ? buildPanelModel(session) : (null as unknown as ReturnType<typeof buildPanelModel>);
+const f = present ? (render(<WorkCard model={model} />).lastFrame() ?? '') : '';
 
-describe('WorkCard (作品 end-card)', () => {
-  const model = buildPanelModel(session);
-  const f = render(<WorkCard model={model} />).lastFrame() ?? '';
-
+describe.skipIf(!present)('WorkCard (作品 end-card)', () => {
   it('surfaces the real (redacted) wish', () => {
     expect(f).toContain('愿望');
     expect(f).toContain('杀戮尖塔');

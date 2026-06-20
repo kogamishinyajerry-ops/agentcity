@@ -2,16 +2,24 @@
 // the panel's hero number, the real wish, the provenance seal — and NEVER the
 // alarm-red error colour (a finished run's errors are resilience, not alert).
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import type { ParsedSession } from '../model/types.ts';
 import { buildPanelModel } from '../tui/viewModel.ts';
 import { renderCardSvg } from './cardSvg.ts';
 
-const session = JSON.parse(readFileSync('sample/parsed-sample.json', 'utf8')) as ParsedSession;
-const model = buildPanelModel(session);
-const svg = renderCardSvg(model);
+// Fixture is gitignored (real transcript) → skip cleanly when absent (fresh clone).
+const SAMPLE = 'sample/parsed-sample.json';
+const present = existsSync(SAMPLE);
+const session = present
+  ? (JSON.parse(readFileSync(SAMPLE, 'utf8')) as ParsedSession)
+  : (null as unknown as ParsedSession);
+// Derived at module level behind `present` — `describe.skipIf` still runs the
+// suite body to collect tests, so this setup can't throw there on a fresh clone.
+const model = present ? buildPanelModel(session) : (null as unknown as ReturnType<typeof buildPanelModel>);
+const svg = present ? renderCardSvg(model) : '';
 
-describe('renderCardSvg (作品 poster export)', () => {
+describe.skipIf(!present)('renderCardSvg (作品 poster export)', () => {
+
   it('is a well-formed, self-contained single <svg> root', () => {
     expect(svg.startsWith('<svg')).toBe(true);
     expect(svg.trim().endsWith('</svg>')).toBe(true);

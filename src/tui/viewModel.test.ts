@@ -1,16 +1,23 @@
 // Regression for the TUI view-model — asserts the panel is derived from the REAL
 // parsed sample and stays honest (workload = Σ bars, RED tracks real errors).
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { ParsedSession } from '../model/types.ts';
 import { buildPanelModel } from './viewModel.ts';
 
-const session = JSON.parse(
-  readFileSync('sample/parsed-sample.json', 'utf8')
-) as ParsedSession;
+// The parsed-sample fixture is gitignored (it's a real transcript). On a fresh
+// clone it's absent, so these suites skip rather than error — full coverage runs
+// wherever the fixture is present.
+const SAMPLE = 'sample/parsed-sample.json';
+const present = existsSync(SAMPLE);
+const session = present
+  ? (JSON.parse(readFileSync(SAMPLE, 'utf8')) as ParsedSession)
+  : (null as unknown as ParsedSession);
+// Derived once at module level behind `present` — describe.skipIf still RUNS the
+// suite body to collect tests, so throwing setup can't live there.
+const m = present ? buildPanelModel(session) : (null as unknown as ReturnType<typeof buildPanelModel>);
 
-describe('tui panel model — real sample (end state)', () => {
-  const m = buildPanelModel(session);
+describe.skipIf(!present)('tui panel model — real sample (end state)', () => {
 
   it('workload is self-consistent: laborSteps === Σ bars', () => {
     const sum = m.bars.reduce((n, b) => n + b.calls, 0);
@@ -36,7 +43,7 @@ describe('tui panel model — real sample (end state)', () => {
   });
 });
 
-describe('tui narration (the story beat at the playhead)', () => {
+describe.skipIf(!present)('tui narration (the story beat at the playhead)', () => {
   it('surfaces a turning-point beat (honest gloss, never fabricated)', () => {
     expect(buildPanelModel(session).narration).toBeTruthy();
   });
@@ -47,7 +54,7 @@ describe('tui narration (the story beat at the playhead)', () => {
   });
 });
 
-describe('tui panel model — seq-relative', () => {
+describe.skipIf(!present)('tui panel model — seq-relative', () => {
   it('shows less work early than at the end', () => {
     const early = buildPanelModel(session, 100);
     const end = buildPanelModel(session);
@@ -57,7 +64,7 @@ describe('tui panel model — seq-relative', () => {
   });
 });
 
-describe('tui inline finale (end only, panel-consistent number)', () => {
+describe.skipIf(!present)('tui inline finale (end only, panel-consistent number)', () => {
   it('appears only at the end', () => {
     expect(buildPanelModel(session, 100).finale).toBeNull();
     expect(buildPanelModel(session).finale).not.toBeNull();
