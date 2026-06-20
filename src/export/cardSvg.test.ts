@@ -37,9 +37,22 @@ describe.skipIf(!present)('renderCardSvg (作品 poster export)', () => {
     expect(svg).not.toContain('全程真实可溯源');
   });
 
-  it('embeds a machine-parseable provenance receipt + an identified hero numeral', () => {
+  it('embeds a machine-parseable receipt + tags every verifiable visible field', () => {
     expect(svg).toContain('<metadata id="ac-prov">');
-    expect(svg).toContain('id="ac-hero"');
+    for (const id of ['ac-hero', 'ac-wish', 'ac-include', 'ac-dur', 'ac-seal']) {
+      expect(svg).toContain(`id="${id}"`);
+    }
+  });
+
+  it('leaks no plaintext sessionId / timestamps in the embedded receipt (privacy)', () => {
+    const sid = computeCardProvenance(SAMPLE).session.meta.sessionId;
+    // The receipt is hashes-only; the sessionId is re-derived from the transcript,
+    // never embedded — so inspecting the SVG source reveals nothing the redactor stripped.
+    expect(svg).not.toContain(`>${sid}<`);
+    const meta = svg.match(/<metadata id="ac-prov">([\s\S]*?)<\/metadata>/)![1];
+    const decoded = Buffer.from(meta, 'base64').toString('utf8');
+    expect(decoded).not.toContain(sid);
+    expect(/\d{4}-\d{2}-\d{2}T/.test(decoded)).toBe(false); // no ISO timestamps
   });
 
   it('never paints errors with the alarm-red colour', () => {

@@ -256,7 +256,9 @@ function redactDescription(stats: RedactionStats, desc: string): string {
 
 function safeReaddir(dir: string): string[] {
   try {
-    return readdirSync(dir);
+    // Sort: readdirSync order is filesystem-dependent, but subagent seq attribution
+    // (and the provenance input-set hash) must be byte-identical across platforms.
+    return readdirSync(dir).sort();
   } catch {
     return [];
   }
