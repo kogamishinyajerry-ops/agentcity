@@ -1,11 +1,11 @@
 // ============================================================================
-// cardFace — the SINGLE source of every VISIBLE string on a 作品 card. Both the
-// renderer (cardSvg) and the verifier (cardProvenance) derive the face from the
-// SAME PanelModel here, so the verifier can re-render the face from the transcript
-// and assert the SVG displays EXACTLY those strings. That binding is what makes
-// the whole visible surface — not just the hero numeral — unforgeable: editing
-// the wish / duration / 「包括」 line / seal fingerprint in a card without
-// re-deriving from the real transcript makes verifyCard fail.
+// cardFace — the SINGLE source of every VISIBLE string on a 作品 card, feeding
+// the renderer (cardSvg) and the verifier's per-field DIAGNOSTICS (cardProvenance).
+// NOTE: the airtight forgery guarantee is NOT here — it is cardProvenance's
+// whole-card re-render equality (the per-field id checks only see tagged elements
+// and so cannot catch an EXTRA/un-id'd visible element). cardFace just keeps the
+// human-friendly "卡面步数 卡面=X 应为=Y" diagnostics honest by deriving them from
+// the same PanelModel the renderer uses.
 //
 // Pure + presentation-free of colour/layout: just the canonical text content.
 // ============================================================================

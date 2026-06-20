@@ -72,9 +72,9 @@ describe('verifyAgainstTranscript — visible-face tampering (the binding the re
     const { model, provenance, svg } = build();
     failed(svg.replace(/(id="ac-hero"[^>]*>)611/, '$16110'), { provenance, model }, '卡面步数');
   });
-  it('catches an edited wish', () => {
+  it('catches an edited wish (now via the whole-card gate)', () => {
     const { model, provenance, svg } = build();
-    failed(svg.replace(/(id="ac-wish"[^>]*>)[^<]*/, '$1我没干过的事'), { provenance, model }, '卡面愿望');
+    failed(svg.replace(/(id="ac-wish"[^>]*>)[^<]*/, '$1我没干过的事'), { provenance, model }, '卡面完整性');
   });
   it('catches an edited duration', () => {
     const { model, provenance, svg } = build();
@@ -92,6 +92,25 @@ describe('verifyAgainstTranscript — visible-face tampering (the binding the re
     const { model, provenance, svg } = build();
     const overlaid = svg.replace('</svg>', '<text id="ac-hero" x="60" y="252">9999</text></svg>');
     failed(overlaid, { provenance, model }, '卡面步数');
+  });
+
+  // N1/N2 (loop-auditor): the per-field id checks see only the 5 tagged elements,
+  // so an EXTRA un-id'd visible <text> is invisible to them. The whole-card
+  // completeness gate (卡面完整性) is what catches this class.
+  it('catches an injected un-id\'d visible <text> (overlay headline)', () => {
+    const { model, provenance, svg } = build();
+    const overlay = svg.replace('</svg>', '<text x="60" y="120" font-size="40">我帮你赚了一百万</text></svg>');
+    // every per-field check still passes — only the completeness gate fails:
+    const r = verifyAgainstTranscript(overlay, { provenance, model });
+    expect(r.ok).toBe(false);
+    expect(r.checks.find((c) => c.name === '卡面步数')!.ok).toBe(true);
+    expect(r.checks.find((c) => c.name === '卡面完整性')!.ok).toBe(false);
+  });
+  it('catches a forged 愿望 line injected onto a NO-WISH card (the N1 fail-open)', () => {
+    const { model, provenance, svg } = build({ intent: null });
+    expect(svg).not.toContain('ac-wish'); // genuinely no wish line
+    const forged = svg.replace('</svg>', '<text x="60" y="96" font-size="19">愿望 · 我帮你赚了一百万</text></svg>');
+    failed(forged, { provenance, model }, '卡面完整性');
   });
 });
 

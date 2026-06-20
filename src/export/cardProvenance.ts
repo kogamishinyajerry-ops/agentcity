@@ -9,10 +9,13 @@
 //      .jsonl + every file under the sibling subagents/ tree), so the hash must
 //      cover that whole set, not just the single main file. Otherwise a verifier
 //      with the full tree false-mismatches a multi-agent card.
-//  (2) FULL-FACE binding — verify re-derives every VISIBLE string (cardFace) from
-//      the transcript and asserts the SVG displays exactly those, so editing the
-//      wish / duration / 「包括」 line / seal fingerprint is caught — not just the
-//      hero numeral. Extraction is fail-closed: a field must appear exactly once.
+//  (2) WHOLE-CARD binding — renderCardSvg is pure, so a genuine card is byte-
+//      identical to a re-render from this transcript. verify asserts that equality
+//      (modulo line endings), which binds the ENTIRE visible surface — not just the
+//      id-tagged fields. This is the airtight gate: an EXTRA or un-id'd visible
+//      element (a forged 愿望 line, an overlay headline, <foreignObject> text)
+//      makes the card differ from the canonical re-render → ✗. The per-field
+//      cardFace checks remain only as friendly diagnostics for single-field edits.
 // ============================================================================
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
@@ -30,6 +33,7 @@ import {
   type Receipt,
 } from '../model/provenance.ts';
 import { cardFace } from './cardFace.ts';
+import { renderCardSvg } from './cardSvg.ts';
 
 const MARK_OPEN = '<metadata id="ac-prov">';
 const MARK_CLOSE = '</metadata>';
@@ -126,6 +130,13 @@ function unesc(s: string): string {
   return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
 }
 
+/** Normalise only line endings + trailing whitespace (CRLF, a stray final newline
+ *  from an editor) — NOT structure/attributes. Lets a benignly re-saved card still
+ *  verify, while leaving zero room to hide a visible element. */
+function normSvg(s: string): string {
+  return s.replace(/\r\n/g, '\n').replace(/[ \t]+$/gm, '').replace(/\s+$/, '');
+}
+
 /** Read the text content of the element carrying `id="<id>"`. Fail-closed: returns
  *  null unless EXACTLY ONE such element exists (0 = missing, >1 = overlay attack). */
 export function extractById(svg: string, id: string): string | null {
@@ -178,20 +189,28 @@ export function verifyAgainstTranscript(
   checks.push(check('声明指纹', receipt.claimHash === rp.claimHash, '卡声明的数字与 transcript 重算不符'));
   checks.push(check('完整指纹', receipt.fingerprint === rp.fingerprint, '指纹整体不符(被篡改,或并非同一次 run)'));
 
-  // (c) the WHOLE visible face must equal the face re-rendered from the transcript
+  // (c) per-field diagnostics — friendly messages for the common single-field edit.
+  // These are NOT the completeness guarantee (they only see the id-tagged elements);
+  // (d) below is the airtight gate. Kept because "卡面步数 卡面=X 应为=Y" beats a
+  // whole-card diff for the 90% case.
   const face = cardFace(recomputed.model);
-  const vWish = extractById(svg, 'ac-wish');
-  if (face.wish) {
-    checks.push(check('卡面愿望', vWish === face.wish, `卡面=${vWish ?? '(读不到)'} / 应为=${face.wish}`));
-  } else {
-    checks.push(check('卡面愿望', vWish === null, '卡面显示了愿望,但此 run 无开场愿望'));
-  }
   const vHero = extractById(svg, 'ac-hero');
   const heroNorm = vHero?.replace(/,/g, '') ?? null;
   checks.push(check('卡面步数', heroNorm === face.hero, `卡面=${vHero ?? '(读不到)'} / 应为=${face.hero}`));
   checks.push(check('卡面明细', extractById(svg, 'ac-include') === face.include, `应为=${face.include}`));
   checks.push(check('卡面时长', extractById(svg, 'ac-dur') === face.dur, `应为=${face.dur}`));
   checks.push(check('卡面指纹', extractById(svg, 'ac-seal') === rp.short, `卡面=${extractById(svg, 'ac-seal') ?? '(读不到)'} / 应为=${rp.short}`));
+
+  // (d) WHOLE-CARD completeness — the airtight gate. renderCardSvg is pure, so a
+  // genuine card is byte-identical to a re-render from this transcript. Any EXTRA
+  // or un-id'd visible element (a forged 愿望 line on a no-wish card, an overlay
+  // headline, <foreignObject>/<textPath>/<style> text) — the whole class the
+  // per-field id checks can't see — makes the card differ from the canonical
+  // re-render → ✗. This closes the "visible surface ⊄ bound set" gap.
+  const canonical = renderCardSvg(recomputed.model, rp);
+  checks.push(
+    check('卡面完整性', normSvg(svg) === normSvg(canonical), '卡面与依据 transcript 重新渲染的标准卡不一致(含未授权的额外元素或改动)')
+  );
 
   return { ok: checks.every((c) => c.ok), checks };
 }
