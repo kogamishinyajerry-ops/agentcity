@@ -14,7 +14,8 @@
     "tui:preview": "tsx src/tui/preview.tsx",
     "tui:card": "tsx src/tui/previewCard.tsx",
     "export:card": "tsx src/export/exportCard.ts",
-    "export:replay": "tsx src/export/exportReplay.ts"
+    "export:replay": "tsx src/export/exportReplay.ts",
+    "verify:card": "tsx src/export/verifyCard.ts"
   },
   "devDependencies": {
     "@types/react": "^18.3.31",

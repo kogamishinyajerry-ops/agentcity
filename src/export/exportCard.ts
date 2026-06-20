@@ -1,13 +1,12 @@
 // ============================================================================
-// exportCard — write a run's 作品 card to a shareable SVG file (node, zero-dep).
+// exportCard — write a run's 作品 card to a shareable, VERIFIABLE SVG (node).
 //   npx tsx src/export/exportCard.ts <parsed.json|session.jsonl> [out.svg]
-// Reuses the SAME honest pipeline as the TUI (loadSession → buildPanelModel),
-// so the poster can never disagree with the panel. 100% local: it only reads
-// the transcript and writes one local .svg — no network.
+// Reuses the SAME honest pipeline as the TUI (loadSession → buildPanelModel) and
+// embeds a provenance fingerprint so the card can be independently proven with
+// `verify:card`. 100% local: reads the transcript, writes one .svg, no network.
 // ============================================================================
 import { writeFileSync } from 'node:fs';
-import { loadSession } from '../tui/loadSession.ts';
-import { buildPanelModel } from '../tui/viewModel.ts';
+import { computeCardProvenance } from './cardProvenance.ts';
 import { renderCardSvg } from './cardSvg.ts';
 
 const path = process.argv[2];
@@ -17,6 +16,8 @@ if (!path) {
   process.exit(2);
 }
 
-const svg = renderCardSvg(buildPanelModel(loadSession(path)));
+const { model, provenance } = computeCardProvenance(path);
+const svg = renderCardSvg(model, provenance);
 writeFileSync(out, svg, 'utf8');
-console.error(`✓ wrote ${out} (${svg.length} bytes)`);
+console.error(`✓ wrote ${out} (${svg.length} bytes) · fp ${provenance.short}`);
+console.error(`  verify: tsx src/export/verifyCard.ts ${out} ${path}`);

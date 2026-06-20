@@ -29,7 +29,7 @@ describe.skipIf(!present)('WorkCard (作品 end-card)', () => {
   it('shows the labor asymmetry + the honest provenance seal', () => {
     expect(f).toContain('它替你跑了');
     expect(f).toContain('你亲手');
-    expect(f).toContain('全程真实');
+    expect(f).toContain('数据来自真实记录');
   });
 
   it('carries the «包括» subset with real sub-stats', () => {

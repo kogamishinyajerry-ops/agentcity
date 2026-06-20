@@ -76,7 +76,7 @@ export function App({ model }: { model: PanelModel }) {
         <Text color={INK.tool} bold>
           {m.laborSteps}
         </Text>
-        <Text> 次工具调用   ·   你亲手 </Text>
+        <Text> 步   ·   你亲手 </Text>
         <Text color={INK.human} bold>
           0
         </Text>

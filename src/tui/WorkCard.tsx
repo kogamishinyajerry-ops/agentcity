@@ -59,7 +59,7 @@ export function WorkCard({ model }: { model: PanelModel }) {
         </Text>
       ))}
       <Box>
-        <Text dimColor>次工具调用　·　你亲手 </Text>
+        <Text dimColor>步　·　你亲手 </Text>
         <Text color={INK.human} bold>
           0
         </Text>
@@ -73,7 +73,7 @@ export function WorkCard({ model }: { model: PanelModel }) {
       </Box>
       <Box>
         <Text dimColor>{fin?.duration ?? model.duration ?? ''}　·　</Text>
-        <Text color={INK.ok}>✓ 全程真实可溯源</Text>
+        <Text color={INK.ok}>✓ 数据来自真实记录</Text>
       </Box>
     </Box>
   );
