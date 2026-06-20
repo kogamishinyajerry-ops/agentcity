@@ -10,3 +10,7 @@ dist
 # Superseded web-era 3D-city design mockups (the project is a terminal UI now).
 # Kept on disk, excluded from the repo — delete this line to publish them.
 /docs/mockups/
+
+# Throwaway hidden VHS outputs from the screenshot tapes (the real artifacts are
+# the .png Screenshots; VHS just requires an Output, so it writes a dotfile gif).
+/docs/shots/.*.gif
