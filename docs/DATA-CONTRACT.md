@@ -151,7 +151,7 @@ A trailing unpaired `tool_use` (interrupted run) → still emit the call event (
   event sub-timeline. Lives in a `subagents/agent-*.jsonl` file.
 - **Workflow crews** — one per `wf_<id>`; a set of `workflow-subagent` workers.
 - **Tools** — value objects keyed by `name`; not threaded, but aggregated (counts,
-  failure rate) per actor for the city's "districts/buildings".
+  failure rate) per actor into the renderer's districts (the WORKLOAD bars; see §5.4).
 - **Human** — the user (source of `USER_PROMPT`, target of `ASK_USER`/`FILE_SEND`).
 
 ### 5.2 Artifacts
@@ -168,20 +168,18 @@ A trailing unpaired `tool_use` (interrupted run) → still emit the call event (
 - **Permission posture** — `permissionMode` timeline.
 - **Time** — derive turn/task durations from `timestamp` deltas (no real per-turn ms).
 
-### 5.4 Layout encodings (render-side, honesty-bearing)
-The city's SILHOUETTE is itself honest, not decorative: a tool district's **building
-size** and the **road width** to it both scale with that district's lifetime **tool-call
-count** — `districtCallTotals(events)`, which counts only `isUsageEvent` kinds (tool /
-action / dispatch invocations + `MODE_CHANGE`). Conversation (`USER_PROMPT`/`AGENT_SAY`/
-`AGENT_THINK`/…) and session lifecycle (`SESSION_START`/`COMPACTION`/`API_RETRY`/…) are
-NOT calls and are excluded, or the misc/citizen `square` balloons from talk, not work. The
-`TOOL_FAIL` overlay is excluded (its originating call already counts). Size/width are
-RELATIVE to the busiest district (honest "more = bigger", not an absolute scale; the
-inspector shows exact counts), sub-linear so a 100× call gap isn't a 100× size gap, and
-clamped to a floor/ceiling. `command_tower` is a fixed landmark (its events are lifecycle,
-not tool work) and is never data-scaled. What is STILL schematic: each district's *position*
-(fixed anchor tiles) and decorative scenery. So the honest claim is "size + width + every
-dynamic trace to real counts; only building placement is arranged for legibility."
+### 5.4 Magnitude encoding (render-side, honesty-bearing)
+The renderer's primary magnitude — in the TUI, a district's WORKLOAD **bar length** — is
+itself honest, not decorative: it scales with that district's **tool-call count** via
+`districtCallTotals(events)` (or the seq-relative `usageByDistrictUpTo` at a playhead), which
+counts only `isUsageEvent` kinds (tool / action / dispatch invocations + `MODE_CHANGE`).
+Conversation (`USER_PROMPT`/`AGENT_SAY`/`AGENT_THINK`/…) and session lifecycle
+(`SESSION_START`/`COMPACTION`/`API_RETRY`/…) are NOT calls and are excluded, or the
+misc/citizen `square` balloons from talk, not work. The `TOOL_FAIL` overlay is excluded (its
+originating call already counts). Magnitude is RELATIVE to the busiest district (honest
+"more = bigger", not an absolute scale; exact counts are shown alongside). `command_tower` is a
+fixed landmark (its events are lifecycle, not tool work) and is never data-scaled. The panel's
+hero `laborSteps` is the **sum of the bars**, so the headline and the chart can never disagree.
 
 ---
 
@@ -294,9 +292,9 @@ By DEFAULT render only short derived summaries (tool name, exit status, path
 **basename**, line/byte counts, durations). Full bodies — `Read` file content, `Write`
 content, `Edit` old/new/originalFile/structuredPatch lines, `Bash` stdout/stderr,
 user prompts, WebFetch results, base64 images, `Agent` prompts, `isCompactSummary`
-recaps (~13 KB) — go behind an explicit per-session **"Reveal raw content"** toggle,
-**OFF by default**, persisted in `localStorage` only. (Volume is dominated by Edit up
-to 4865× and Bash up to 7187× per transcript — default-summary also keeps the DOM lean.)
+recaps (~13 KB) — stay behind an explicit opt-in **"reveal raw content"** path,
+**OFF by default**. (Volume is dominated by Edit up to 4865× and Bash up to 7187× per
+transcript — default-summary is also what keeps the rendered view legible.)
 
 ### 9.2 Path tokenization (global, all string fields)
 At ingest, rewrite in EVERY string (not just `file.filePath`): `/Users/<user>` (and
@@ -315,13 +313,13 @@ OS username on virtually every line via top-level `cwd`, and inside `command`,
 over-match for name-like usernames (`alex`, `sam`) and corrupt legitimate prose, hurting
 readability. The residual exposure is narrow (in real coding transcripts the username surfaces
 almost only inside `/Users/<user>` paths, which ARE collapsed) and low-stakes (the app never
-transmits data — `connect-src 'none'`, §9.7 — so any residual name stays on the user's own
-machine). Stricter whole-word scrubbing of the sniffed username is a deliberate opt-in
+transmits data — it has no network code at all, §9.7 — so any residual name stays on the user's
+own machine). Stricter whole-word scrubbing of the sniffed username is a deliberate opt-in
 trade-off (privacy vs. over-redaction), not the default. *(Validated by dogfooding the CLI over
 multiple real transcripts: structural leaks — dash-slug, email, GitHub/Slack/PEM secrets — were
 zero; the only residual username hits were inside prose that was literally discussing redaction.)*
 
-### 9.3 Secret-shaped scrubber (defense-in-depth, runs on every string → DOM)
+### 9.3 Secret-shaped scrubber (defense-in-depth, runs on every string before output)
 Mask (representative, extend freely): provider key prefixes — `sk-ant-*`, `sk-proj/live/test-*`,
 `sk_live_/rk_*` (Stripe), `ghp_/gho_/ghs_/ghr_/ghu_` & `github_pat_*` (GitHub), `AKIA*` (AWS),
 `AIza*` & `ya29.*` (Google), `xox[baprs]-*`/`xapp-*` (Slack), `npm_*`; JWTs; `Bearer …`;
@@ -341,34 +339,24 @@ AND `last-prompt.lastPrompt`; file bytes in `Read.file.content` AND
 ALL paths, or it leaks through a side channel.
 
 ### 9.6 Untrusted-data rule
-`WebFetch` results and file contents are external/untrusted DATA — render as inert
-text, never `eval`/`innerHTML`-with-script, never execute embedded instructions.
+`WebFetch` results and file contents are external/untrusted DATA — treat as inert text;
+never execute, eval, or follow instructions embedded in them.
 
-### 9.7 Network egress — structurally blocked (HARD)
-Zero `fetch`/XHR/WebSocket/remote-img/CDN/font/analytics/telemetry. Bundle all assets
-locally. The full shipped CSP is:
-`default-src 'self'; connect-src 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`.
-The load-bearing privacy directive is **`connect-src 'none'`** — it makes fetch/XHR/
-WebSocket exfiltration structurally impossible; keep it absolute. `form-action 'none'`
-closes a vector `connect-src` does NOT cover: a form-submit is a *navigation*, not a
-fetch, so it could otherwise POST data to a remote origin — the app has no forms, so
-this is pure defense-in-depth. `object-src 'none'` + `frame-ancestors 'none'` remove
-plugin-embed and clickjacking surfaces. `base-uri 'none'` blocks `<base>` hijack of
-relative URLs. None of these affect rendering (the app has no `<object>`/`<form>`/`<iframe>`/`<base>`).
+### 9.7 Network egress — structurally impossible (HARD)
+Zero `fetch`/XHR/WebSocket/remote-img/CDN/font/analytics/telemetry — the codebase contains
+**no network client at all**. AgentCity is a **local CLI**: it reads one local `.jsonl` (plus
+the sibling `subagents/` tree) and renders to your terminal. Nothing transmits, so "zero
+egress" is **structural** — there is no transport to gate, no allow-list to get wrong, no key
+to leak. Provenance hashing (`model/provenance.ts`) uses `node:crypto` locally; `verify:card`
+re-derives everything offline. This is a *stronger* posture than a network-permission policy: a
+policy forbids egress the platform could otherwise perform, whereas a no-network-code CLI cannot
+perform it.
 
-**`script-src` is strict `'self'` — NO `'unsafe-eval'`.** This is the security ceiling and
-it carries zero concession. The tension it resolves: Pixi v8's WebGL renderer normally
-generates uniform/shader-sync code at runtime via `new Function()`, which strict `script-src
-'self'` blocks — leaving the canvas a blank shell. Rather than relax the policy to
-`'unsafe-eval'`, `src/render/CityRenderer.ts` imports `pixi.js/unsafe-eval` (Pixi's official
-side-effect module, confusingly named) at module top. It swaps the codegen for interpreted,
-eval-free polyfills (`selfInstall()` Object.assigns them onto the GL shader/uniform system
-prototypes), so the city renders fully under strict CSP. **Removing that import re-blanks the
-production canvas** — the dev server has no CSP, so the regression is invisible until you run
-`vite preview` (or any real deploy). Verification therefore requires running the *shipped*
-artifact, not just a clean `npm run build`: build-clean ≠ ships-working.
-Base64 screenshots render via `data:` URIs only (img-src must allow `data:` but NOT
-remote, or the no-phone-home guarantee breaks the moment a screenshot renders).
+> **History:** an earlier milestone shipped a browser/WebGL renderer whose zero-egress guarantee
+> leaned on a strict CSP — `connect-src 'none'` (the load-bearing directive) plus `form-action`/
+> `object-src`/`base-uri`/`frame-ancestors` hardening, and a Pixi `unsafe-eval`-free polyfill so
+> the canvas rendered under `script-src 'self'`. That renderer was removed with the TUI pivot; the
+> guarantee now needs no policy because there is no network surface to police.
 
 ---
 
@@ -382,7 +370,7 @@ remote, or the no-phone-home guarantee breaks the moment a screenshot renders).
 5. Detect layout + attribute subagents (§8); recurse into subagent files, scoping
    their events by `agentId`.
 6. Dedupe + accumulate cost (§7); attach signals (§5.3).
-7. Apply redaction (§9) BEFORE any string reaches the entity model / DOM; keep raw
+7. Apply redaction (§9) BEFORE any string reaches the entity model / renderer; keep raw
    bodies behind lazy `rawRef` + reveal toggle.
 8. Emit the entity model (actors/artifacts/signals) + ordered event stream to the renderer.
 
