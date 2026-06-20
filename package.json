@@ -18,6 +18,7 @@
     "verify:card": "tsx src/export/verifyCard.ts"
   },
   "devDependencies": {
+    "@types/node": "^22.20.0",
     "@types/react": "^18.3.31",
     "ink-testing-library": "^4.0.0",
     "tsx": "^4.19.2",
