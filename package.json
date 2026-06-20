@@ -1,0 +1,31 @@
+{
+  "name": "agentcity",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "AgentCity — turn a real Claude Code JSONL transcript into a living, replayable instrument panel in your terminal.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "verify": "tsc --noEmit && vitest run",
+    "ingest:test": "tsx src/ingest/cli.ts",
+    "tui": "tsx src/tui/cli.tsx",
+    "tui:preview": "tsx src/tui/preview.tsx",
+    "tui:card": "tsx src/tui/previewCard.tsx",
+    "export:card": "tsx src/export/exportCard.ts",
+    "export:replay": "tsx src/export/exportReplay.ts"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.31",
+    "ink-testing-library": "^4.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vite": "^6.0.7",
+    "vitest": "^4.1.8"
+  },
+  "dependencies": {
+    "ink": "^5.2.1",
+    "react": "^18.3.1"
+  }
+}

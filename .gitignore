@@ -1,0 +1,12 @@
+node_modules
+dist
+*.local
+.DS_Store
+# Never commit real transcripts — they contain private user content.
+*.jsonl
+/sample/
+/.vite
+
+# Superseded web-era 3D-city design mockups (the project is a terminal UI now).
+# Kept on disk, excluded from the repo — delete this line to publish them.
+/docs/mockups/
