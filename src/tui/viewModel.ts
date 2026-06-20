@@ -18,7 +18,7 @@ import { DISTRICT_LABEL, eventToDistrict, isUsageEvent } from '../model/mapping.
 import { computeSpotlight, type SpotlightAccent } from '../render/seekState.ts';
 import { compactionsUpTo, editsUpTo, failsUpTo } from '../hud/health.ts';
 import { endTally } from '../model/tally.ts';
-import { narrativeBeats, beatAtSeq } from '../model/narrative.ts';
+import { narrativeBeats, beatAtSeq, storyArc } from '../model/narrative.ts';
 
 /** Short Chinese gloss per district — what the building actually does. */
 const DISTRICT_DESC: Record<DistrictKind, string> = {
@@ -121,6 +121,12 @@ export interface FinaleStat {
   value: number;
 }
 
+/** One line of the finale "一路走来" journey — a real turning-point beat. */
+export interface JourneyBeat {
+  text: string;
+  drama: boolean;
+}
+
 export interface FinaleModel {
   duration: string | null;
   /** Anchored to the panel's laborSteps (Σ bars) so panel + finale agree. */
@@ -128,17 +134,24 @@ export interface FinaleModel {
   /** "包括 ——" sub-counts (a highlighted SUBSET, never claimed to sum to hero). */
   stats: FinaleStat[];
   punchline: string;
+  /** The run's real turning points in order — the journey to "认领" (own). */
+  journey: JourneyBeat[];
+  /** Real total turning-point count (≥ journey.length) so a highlights cap is honest. */
+  journeyTotal: number;
 }
 
 /** Inline finale — reuses endTally for the real sub-stats, but overrides the hero
  *  number + punchline with the panel's laborSteps so the two views never disagree. */
 function buildFinale(session: ParsedSession, laborSteps: number): FinaleModel {
   const t = endTally(session);
+  const arc = storyArc(session, 5);
   return {
     duration: t.duration,
     laborSteps,
     stats: t.stats.map((s) => ({ key: s.key, value: s.value })),
     punchline: `人只说了要做什么 —— 剩下 ${laborSteps} 步,它自己干完了。`,
+    journey: arc.beats.map((b) => ({ text: b.text, drama: b.tone === 'drama' })),
+    journeyTotal: arc.total,
   };
 }
 

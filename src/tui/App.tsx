@@ -145,6 +145,23 @@ export function App({ model }: { model: PanelModel }) {
               </Text>
             ))}
           </Box>
+
+          {fin.journey.length > 0 && (
+            <Box flexDirection="column" marginTop={1}>
+              <Text dimColor>
+                一路走来{fin.journeyTotal > fin.journey.length ? `  ·  共 ${fin.journeyTotal} 个转折` : ''}
+              </Text>
+              {fin.journey.map((b, i) => (
+                <Box key={i}>
+                  <Text color={INK.dim}>{i === fin.journey.length - 1 ? '  └ ' : '  ├ '}</Text>
+                  <Text color={b.drama ? INK.drama : undefined} dimColor={!b.drama}>
+                    {clipCols(b.text, 56)}
+                  </Text>
+                </Box>
+              ))}
+            </Box>
+          )}
+
           <Box marginTop={1}>
             <Text dimColor italic>
               {fin.punchline}

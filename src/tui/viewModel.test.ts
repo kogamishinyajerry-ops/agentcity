@@ -69,4 +69,15 @@ describe('tui inline finale (end only, panel-consistent number)', () => {
     const edits = m.finale!.stats.find((s) => s.key === 'edits');
     expect(edits?.value).toBe(session.files.reduce((n, f) => n + f.edits, 0));
   });
+
+  it('carries the "一路走来" journey: ordered real beats, anchored + honestly capped', () => {
+    const fin = m.finale!;
+    expect(fin.journey.length).toBeGreaterThan(0);
+    expect(fin.journeyTotal).toBeGreaterThanOrEqual(fin.journey.length);
+    // anchors: the journey opens on 开工 and ends on the closing beat
+    expect(fin.journey[0].text).toContain('开工');
+    expect(fin.journey[fin.journey.length - 1].text).toContain('结束');
+    // the compaction is flagged as a drama beat (the 记忆清洗 cue)
+    expect(fin.journey.some((b) => b.drama && b.text.includes('记忆'))).toBe(true);
+  });
 });

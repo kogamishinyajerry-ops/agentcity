@@ -6,6 +6,7 @@ import {
   narrativeBeats,
   beatAtSeq,
   currentIntent,
+  storyArc,
   type NarrativeBeat,
 } from './narrative.ts';
 import type {
@@ -157,6 +158,55 @@ describe('narrativeBeats — the plain-language story skeleton', () => {
       sess([ev(1, 'SESSION_START'), ev(8, 'COMPACTION'), ev(4, 'USER_PROMPT'), ev(20, 'AGENT_TURN_END')])
     );
     const seqs = beats.map((b) => b.seq);
+    expect(seqs).toEqual([...seqs].sort((a, b) => a - b));
+  });
+});
+
+describe('storyArc — the finale journey (honest highlights, never invented)', () => {
+  // open(w5) + prompt(w3) + branch(w1) + spawn(w3) + error(w4) + compaction(w5) + mode(w1) + close(w5)
+  const rich = () =>
+    sess([
+      ev(1, 'SESSION_START'),
+      ev(3, 'USER_PROMPT', { label: '做个登录页' }),
+      ev(5, 'BRANCH_SWITCH'),
+      ev(7, 'SUBAGENT_SPAWN'),
+      ev(9, 'FILE_EDIT', { isError: true }),
+      ev(11, 'COMPACTION'),
+      ev(13, 'MODE_CHANGE'),
+      ev(20, 'AGENT_TURN_END'),
+    ]);
+
+  it('returns every beat (untruncated) when the count fits', () => {
+    const arc = storyArc(sess([ev(1, 'SESSION_START'), ev(3, 'USER_PROMPT', { label: 'go' }), ev(9, 'AGENT_TURN_END')]), 5);
+    expect(arc.truncated).toBe(false);
+    expect(arc.beats).toHaveLength(3);
+    expect(arc.total).toBe(3);
+  });
+
+  it('caps to a highlights pick but reports the real total', () => {
+    const arc = storyArc(rich(), 5);
+    expect(arc.beats).toHaveLength(5);
+    expect(arc.total).toBe(8);
+    expect(arc.truncated).toBe(true);
+  });
+
+  it('always keeps the opening + closing anchors', () => {
+    const arc = storyArc(rich(), 5);
+    expect(arc.beats[0].text).toContain('开工');
+    expect(arc.beats[arc.beats.length - 1].text).toContain('结束');
+  });
+
+  it('keeps the highest-significance beats (compaction, error) and drops low-weight switches', () => {
+    const texts = storyArc(rich(), 5).beats.map((b) => b.text);
+    expect(texts.some((t) => t.includes('记忆'))).toBe(true); // compaction (w5, drama)
+    expect(texts.some((t) => t.includes('失败'))).toBe(true); // error (w4)
+    expect(texts.some((t) => t.includes('登录页'))).toBe(true); // prompt (w3)
+    expect(texts.some((t) => t.includes('分支'))).toBe(false); // branch switch (w1) dropped
+    expect(texts.some((t) => t.includes('权限'))).toBe(false); // mode switch (w1) dropped
+  });
+
+  it('shows the kept beats in true chronological (seq) order', () => {
+    const seqs = storyArc(rich(), 5).beats.map((b) => b.seq);
     expect(seqs).toEqual([...seqs].sort((a, b) => a - b));
   });
 });

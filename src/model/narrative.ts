@@ -18,6 +18,10 @@ export interface NarrativeBeat {
   text: string;
   /** 'drama' beats (a compaction) also cue the ceremonial cutscene. */
   tone: 'normal' | 'drama';
+  /** Significance for the finale story-arc highlights pick (higher = kept first).
+   *  Not editorial about WHAT happened — only which real turning points headline a
+   *  capped recap. Absent on hand-built test beats (treated as 0). */
+  weight?: number;
 }
 
 /** Plain-Chinese gloss of each district, for error beats ("X 那边失败"). */
@@ -52,34 +56,34 @@ function beatFor(e: WorldEvent, firstSeq: number): NarrativeBeat | null {
   if (e.kind === 'TOOL_FAIL') return null;
   // an error on any real tool event is a turning point regardless of kind
   if (e.isError) {
-    return { seq: e.seq, text: `出岔子了 —— ${DISTRICT_CN[eventToDistrict(e.kind)]}那边失败了`, tone: 'normal' };
+    return { seq: e.seq, text: `出岔子了 —— ${DISTRICT_CN[eventToDistrict(e.kind)]}那边失败了`, tone: 'normal', weight: 4 };
   }
   switch (e.kind) {
     case 'SESSION_RESUME':
-      return { seq: e.seq, text: '接着上一次，继续干', tone: 'normal' };
+      return { seq: e.seq, text: '接着上一次，继续干', tone: 'normal', weight: 2 };
     case 'USER_PROMPT': {
       // the real (already-redacted) prompt text IS the story — show it verbatim
       // (bounded), not a generic line. Falls back only if the label is empty.
       const said = e.label ? clip(e.label, 30) : '';
-      return { seq: e.seq, text: said ? `你说:「${said}」` : '你交代了一件事', tone: 'normal' };
+      return { seq: e.seq, text: said ? `你说:「${said}」` : '你交代了一件事', tone: 'normal', weight: 3 };
     }
     case 'SUBAGENT_SPAWN':
-      return { seq: e.seq, text: '派出一支小队去帮忙', tone: 'normal' };
+      return { seq: e.seq, text: '派出一支小队去帮忙', tone: 'normal', weight: 3 };
     case 'SUBAGENT_RESULT':
-      return { seq: e.seq, text: '小队回来交活了', tone: 'normal' };
+      return { seq: e.seq, text: '小队回来交活了', tone: 'normal', weight: 2 };
     case 'WORKFLOW_LAUNCH':
-      return { seq: e.seq, text: '开了一套多智能体编排', tone: 'normal' };
+      return { seq: e.seq, text: '开了一套多智能体编排', tone: 'normal', weight: 3 };
     case 'COMPACTION':
-      return { seq: e.seq, text: '🧠 记忆被压缩 —— 这座城的记忆要抹掉、重写一遍', tone: 'drama' };
+      return { seq: e.seq, text: '🧠 记忆被压缩 —— 这座城的记忆要抹掉、重写一遍', tone: 'drama', weight: 5 };
     case 'MODE_CHANGE':
       // the permission mode at the very FIRST event is a starting state, not a
       // switch — captioning it would mislead (and would mask the opening beat).
       if (e.seq === firstSeq) return null;
-      return { seq: e.seq, text: '权限边检 —— 切换了模式', tone: 'normal' };
+      return { seq: e.seq, text: '权限边检 —— 切换了模式', tone: 'normal', weight: 1 };
     case 'BRANCH_SWITCH':
-      return { seq: e.seq, text: '切到了另一条 git 分支', tone: 'normal' };
+      return { seq: e.seq, text: '切到了另一条 git 分支', tone: 'normal', weight: 1 };
     case 'MODEL_SWITCH':
-      return { seq: e.seq, text: '换了个「大脑」(切换模型)', tone: 'normal' };
+      return { seq: e.seq, text: '换了个「大脑」(切换模型)', tone: 'normal', weight: 1 };
     default:
       return null;
   }
@@ -99,7 +103,7 @@ export function narrativeBeats(session: ParsedSession): NarrativeBeat[] {
   const raw: NarrativeBeat[] = [];
   // opening beat — use the real session title when we have one
   const title = session.meta.title ? clip(session.meta.title, 22) : '';
-  raw.push({ seq: firstSeq, text: title ? `开工 ·「${title}」` : '这座城开工了', tone: 'normal' });
+  raw.push({ seq: firstSeq, text: title ? `开工 ·「${title}」` : '这座城开工了', tone: 'normal', weight: 5 });
 
   for (const e of events) {
     const b = beatFor(e, firstSeq);
@@ -107,7 +111,7 @@ export function narrativeBeats(session: ParsedSession): NarrativeBeat[] {
   }
 
   // closing beat — the transcript itself ends here (always true, never fabricated)
-  raw.push({ seq: lastSeq, text: '这段记录到此结束', tone: 'normal' });
+  raw.push({ seq: lastSeq, text: '这段记录到此结束', tone: 'normal', weight: 5 });
 
   // sort by seq (events are ordered, but the synthesized open/close need placing)
   raw.sort((a, b) => a.seq - b.seq);
@@ -120,6 +124,36 @@ export function narrativeBeats(session: ParsedSession): NarrativeBeat[] {
     out.push(b);
   }
   return out;
+}
+
+/**
+ * The finale "journey" recap — the run's story told as its real turning points in
+ * order, so an outsider can "认领" (claim/own) the path the agent walked while they
+ * weren't watching. Every line is a real beat from `narrativeBeats` (never invented).
+ *
+ * Honesty: when there are more beats than `max`, this is a HIGHLIGHTS pick, not a
+ * rewrite — the opening and closing anchors are always kept, the middle is filled by
+ * the beats' significance `weight` (a compaction/error outranks a branch switch),
+ * and the kept beats are shown in true seq order. `total` reports the real count so
+ * a truncation can be labelled honestly ("共 N 个转折"), never silently dropped.
+ */
+export interface StoryArc {
+  beats: NarrativeBeat[];
+  total: number;
+  truncated: boolean;
+}
+
+export function storyArc(session: ParsedSession, max = 5): StoryArc {
+  const beats = narrativeBeats(session);
+  if (beats.length <= max) return { beats, total: beats.length, truncated: false };
+  const open = beats[0];
+  const close = beats[beats.length - 1];
+  const middle = beats.slice(1, -1);
+  const kept = [...middle]
+    .sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0) || a.seq - b.seq)
+    .slice(0, Math.max(0, max - 2));
+  const picked = [open, ...kept, close].sort((a, b) => a.seq - b.seq);
+  return { beats: picked, total: beats.length, truncated: true };
 }
 
 /**
