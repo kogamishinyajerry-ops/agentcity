@@ -1,0 +1,27 @@
+name: ci
+
+# The credential's whole value is that its honesty is machine-checkable. This
+# workflow runs that check on every push/PR. The private transcript fixture is
+# gitignored, so the honesty + provenance suites run against the SYNTHETIC session
+# (src/test/synthSession.ts) — they must NOT depend on any local fixture.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run verify # tsc --noEmit && vitest run

@@ -1,85 +1,72 @@
-// Regression for the TUI view-model — asserts the panel is derived from the REAL
-// parsed sample and stays honest (workload = Σ bars, RED tracks real errors).
-import { existsSync, readFileSync } from 'node:fs';
+// Regression for the TUI view-model — asserts the panel is derived from a session
+// and stays honest (workload = Σ bars, RED tracks real errors, finale agrees with
+// the panel). Driven by the SYNTHETIC session so it runs on a fresh clone / in CI
+// (the real parsed-sample fixture is gitignored).
 import { describe, expect, it } from 'vitest';
-import type { ParsedSession } from '../model/types.ts';
 import { buildPanelModel } from './viewModel.ts';
+import { synthSession, SYNTH_WISH, SYNTH_LABOR_STEPS } from '../test/synthSession.ts';
 
-// The parsed-sample fixture is gitignored (it's a real transcript). On a fresh
-// clone it's absent, so these suites skip rather than error — full coverage runs
-// wherever the fixture is present.
-const SAMPLE = 'sample/parsed-sample.json';
-const present = existsSync(SAMPLE);
-const session = present
-  ? (JSON.parse(readFileSync(SAMPLE, 'utf8')) as ParsedSession)
-  : (null as unknown as ParsedSession);
-// Derived once at module level behind `present` — describe.skipIf still RUNS the
-// suite body to collect tests, so throwing setup can't live there.
-const m = present ? buildPanelModel(session) : (null as unknown as ReturnType<typeof buildPanelModel>);
+const session = synthSession();
+const m = buildPanelModel(session);
 
-describe.skipIf(!present)('tui panel model — real sample (end state)', () => {
-
+describe('tui panel model (end state)', () => {
   it('workload is self-consistent: laborSteps === Σ bars', () => {
     const sum = m.bars.reduce((n, b) => n + b.calls, 0);
     expect(m.laborSteps).toBe(sum);
+    expect(m.laborSteps).toBe(SYNTH_LABOR_STEPS);
   });
 
-  it('bars are sorted by real call count, kanban dominant', () => {
-    expect(m.bars[0].district).toBe('kanban');
+  it('bars are sorted by real call count (descending)', () => {
     for (let i = 1; i < m.bars.length; i++) {
       expect(m.bars[i - 1].calls).toBeGreaterThanOrEqual(m.bars[i].calls);
     }
+    expect(m.maxCalls).toBe(m.bars[0].calls);
   });
 
   it('surfaces the real (redacted) wish', () => {
-    expect(m.intent).toBeTruthy();
-    expect(m.intent).toContain('杀戮尖塔');
+    expect(m.intent).toBe(SYNTH_WISH);
   });
 
-  it('completed cards match the real kanban', () => {
-    expect(m.footer.cardsDone).toBe(
-      session.kanban.filter((c) => c.lane === 'completed').length
-    );
+  it('completed cards match the kanban', () => {
+    expect(m.footer.cardsDone).toBe(session.kanban.filter((c) => c.lane === 'completed').length);
   });
 });
 
-describe.skipIf(!present)('tui narration (the story beat at the playhead)', () => {
+describe('tui narration (the story beat at the playhead)', () => {
   it('surfaces a turning-point beat (honest gloss, never fabricated)', () => {
-    expect(buildPanelModel(session).narration).toBeTruthy();
+    expect(m.narration).toBeTruthy();
   });
-  it('flags the real compaction as a drama beat (the 记忆清洗 cutscene)', () => {
+  it('flags the compaction as a drama beat (the 记忆清洗 cutscene)', () => {
     const comp = session.events.find((e) => e.kind === 'COMPACTION');
     expect(comp).toBeTruthy();
     expect(buildPanelModel(session, comp!.seq).narration?.drama).toBe(true);
   });
 });
 
-describe.skipIf(!present)('tui panel model — seq-relative', () => {
+describe('tui panel model — seq-relative', () => {
   it('shows less work early than at the end', () => {
-    const early = buildPanelModel(session, 100);
+    const early = buildPanelModel(session, 8); // before the bulk of the tool calls
     const end = buildPanelModel(session);
     expect(early.laborSteps).toBeLessThan(end.laborSteps);
-    expect(early.seqPos.seq).toBe(100);
+    expect(early.seqPos.seq).toBe(8);
     expect(end.atEnd).toBe(true);
   });
 });
 
-describe.skipIf(!present)('tui inline finale (end only, panel-consistent number)', () => {
+describe('tui inline finale (end only, panel-consistent number)', () => {
   it('appears only at the end', () => {
-    expect(buildPanelModel(session, 100).finale).toBeNull();
+    expect(buildPanelModel(session, 8).finale).toBeNull();
     expect(buildPanelModel(session).finale).not.toBeNull();
   });
 
-  it('hero number + punchline match the panel laborSteps (no 597/611 disagreement)', () => {
-    const end = buildPanelModel(session);
-    expect(end.finale!.laborSteps).toBe(end.laborSteps);
-    expect(end.finale!.punchline).toContain(String(end.laborSteps));
+  it('hero number + punchline match the panel laborSteps (no two-number disagreement)', () => {
+    expect(m.finale!.laborSteps).toBe(m.laborSteps);
+    expect(m.finale!.punchline).toContain(String(m.laborSteps));
   });
 
-  it('carries real "包括" sub-stats', () => {
-    const fin = buildPanelModel(session).finale!;
-    expect(fin.stats.length).toBeGreaterThan(0);
-    const edits = fin.stats.find((s) => s.key === 'edits');
+  it('carries real "包括" sub-stats anchored to the aggregates', () => {
+    expect(m.finale!.stats.length).toBeGreaterThan(0);
+    const edits = m.finale!.stats.find((s) => s.key === 'edits');
     expect(edits?.value).toBe(session.files.reduce((n, f) => n + f.edits, 0));
   });
 });

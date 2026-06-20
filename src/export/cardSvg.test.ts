@@ -1,24 +1,27 @@
 // The 作品 poster export must stay honest + well-formed: a single <svg> root,
 // the panel's hero number, the real wish, a VERIFIABLE provenance fingerprint —
 // and NEVER the alarm-red error colour (a finished run's errors are resilience).
-import { describe, expect, it } from 'vitest';
-import { existsSync, readFileSync } from 'node:fs';
-import type { ParsedSession } from '../model/types.ts';
-import { buildPanelModel } from '../tui/viewModel.ts';
+//
+// Driven by the SYNTHETIC session (src/test/synthSession.ts) through the REAL
+// derivation path (computeCardProvenance), so these honesty assertions run on a
+// fresh clone / in CI — the private transcript fixture is gitignored and would
+// otherwise skip them all (green-but-empty, fatal for a credential).
+import { afterAll, describe, expect, it } from 'vitest';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { synthSession, SYNTH_WISH } from '../test/synthSession.ts';
 import { computeCardProvenance } from './cardProvenance.ts';
 import { renderCardSvg } from './cardSvg.ts';
 
-// Fixture is gitignored (real transcript) → skip cleanly when absent (fresh clone).
-const SAMPLE = 'sample/parsed-sample.json';
-const present = existsSync(SAMPLE);
-const session = present
-  ? (JSON.parse(readFileSync(SAMPLE, 'utf8')) as ParsedSession)
-  : (null as unknown as ParsedSession);
-const model = present ? buildPanelModel(session) : (null as unknown as ReturnType<typeof buildPanelModel>);
-const provenance = present ? computeCardProvenance(SAMPLE).provenance : null;
-const svg = present ? renderCardSvg(model, provenance!) : '';
+const dir = mkdtempSync(join(tmpdir(), 'ac-cardsvg-'));
+const path = join(dir, 'synth.json');
+writeFileSync(path, JSON.stringify(synthSession()));
+const { session, model, provenance } = computeCardProvenance(path);
+const svg = renderCardSvg(model, provenance);
+afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
-describe.skipIf(!present)('renderCardSvg (作品 poster export)', () => {
+describe('renderCardSvg (作品 poster export)', () => {
   it('is a well-formed, self-contained single <svg> root', () => {
     expect(svg.startsWith('<svg')).toBe(true);
     expect(svg.trim().endsWith('</svg>')).toBe(true);
@@ -29,11 +32,11 @@ describe.skipIf(!present)('renderCardSvg (作品 poster export)', () => {
 
   it('carries the honest hero number, wish, asymmetry, and verifiable seal', () => {
     expect(svg).toContain(`>${model.laborSteps}</text>`);
-    expect(svg).toContain('杀戮尖塔');
+    expect(svg).toContain(SYNTH_WISH);
     expect(svg).toContain('你亲手');
     expect(svg).toContain('可溯源');
-    // the seal is now the real short fingerprint, not a static slogan
-    expect(svg).toContain(provenance!.short);
+    // the seal is the real short fingerprint, not a static slogan
+    expect(svg).toContain(provenance.short);
     expect(svg).not.toContain('全程真实可溯源');
   });
 
@@ -45,10 +48,10 @@ describe.skipIf(!present)('renderCardSvg (作品 poster export)', () => {
   });
 
   it('leaks no plaintext sessionId / timestamps in the embedded receipt (privacy)', () => {
-    const sid = computeCardProvenance(SAMPLE).session.meta.sessionId;
+    const sid = session.meta.sessionId;
     // The receipt is hashes-only; the sessionId is re-derived from the transcript,
     // never embedded — so inspecting the SVG source reveals nothing the redactor stripped.
-    expect(svg).not.toContain(`>${sid}<`);
+    expect(svg).not.toContain(sid);
     const meta = svg.match(/<metadata id="ac-prov">([\s\S]*?)<\/metadata>/)![1];
     const decoded = Buffer.from(meta, 'base64').toString('utf8');
     expect(decoded).not.toContain(sid);
