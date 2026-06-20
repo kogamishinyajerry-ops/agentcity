@@ -13,7 +13,9 @@ Point it at a `.jsonl` transcript and the run becomes a single Ink TUI panel:
   story beat (on a **compaction** the 旁白 turns violet: the city's memory being wiped and
   rebuilt, marked honestly as it happens);
 - a live error count that **catches fire** (🔥) when a tool fails;
-- a one-key **作品 card** + SVG / GIF export, so a run becomes a shareable artifact.
+- a one-key **作品 card** + SVG / GIF export, so a run becomes a shareable artifact — and the
+  SVG card is **independently verifiable**: it embeds a fingerprint anyone can re-derive from the
+  original transcript to prove the card didn't lie (see [Verifiable provenance](#verifiable-provenance)).
 
 A single **input bar** drives everything — type a `seq` to jump, or `card` / `export` / `play`
 / `error` / `?` / `q`; `← →` step. No menus, no shortcut clutter.
@@ -32,8 +34,11 @@ npx tsx src/tui/cli.tsx ~/.claude/projects/<project>/<sessionId>.jsonl
 npx tsx src/tui/cli.tsx ~/.claude/projects/<project>/<sessionId>.jsonl 798
 
 # turn a run into a shareable artifact:
-npm run export:card   <transcript> [out.svg]    # a static SVG poster
+npm run export:card   <transcript> [out.svg]    # a static SVG poster (with an embedded receipt)
 npm run export:replay <transcript> [out.gif]    # an animated gif + mp4 trailer
+
+# prove a card is faithful to its transcript (exit 0 = ✓, exit 1 = ✗ tampered/mismatched):
+npm run verify:card   <card.svg> <transcript.jsonl|parsed.json>
 ```
 
 Inside the replay the input bar takes a **seq number** (jump there), `card` (the 作品 card),
@@ -53,14 +58,44 @@ real local transcript used as the dev fixture — it is **gitignored and never s
   form), emails, and secret-shaped tokens are masked in the parser before anything is rendered.
 - The dev-harness transcript (`public/sample.jsonl`) is **gitignored** and must never be committed.
 
+## Verifiable provenance
+
+A shareable card is only worth something if nobody can fake it. So the SVG card's "✓ 可溯源"
+seal is not a slogan — it's a **machine-checkable receipt**. `export:card` embeds a small
+opaque receipt (hashes + counts only — never your sessionId, timestamps, or any plaintext
+metric) in the SVG's `<metadata>`. Anyone holding the original transcript runs `verify:card` and
+it re-derives everything from scratch:
+
+```bash
+npm run verify:card agentcity-card.svg ~/.claude/projects/<project>/<sessionId>.jsonl
+# ✓ 收据自洽 / 模式一致 / 原始字节指纹 / 声明指纹 / 完整指纹 / 卡面完整性 …
+# ✓ 一致：这张卡如实呈现 <transcript>   → exit 0
+```
+
+The guarantee (`verifyCard.ts`): **exit 0 ⟺ the embedded receipt matches the transcript *and*
+the card's *entire visible surface* is exactly what the renderer produces for that transcript.**
+The whole-card check (`卡面完整性`) is the airtight part — because the renderer is a pure
+function, a genuine card is byte-identical to a re-render, so *any* edited number, forged wish,
+overlay headline, or injected element makes it differ and fail. The hash covers the full input
+set (the main `.jsonl` **plus** every file under the sibling `subagents/` tree), so multi-agent
+work is bound too. Everything runs locally with `node:crypto` — no network, no third party.
+
+**Honest scope:** this proves a card faithfully represents *that transcript*. It does **not**
+prove the transcript is an authentic Anthropic session — transcripts aren't provider-signed —
+and `verify:card` says so. Errors on the card are shown calmly (resilience, "didn't stop"), never
+in alarm-red; red stays reserved for live fire.
+
 ## How it's built
 
 ```
 src/
   ingest/   parse.ts · redact.ts · cli.ts        raw JSONL → normalized WorldEvent[] + ParsedSession
   model/    types.ts (frozen contract) · mapping.ts (event→district) · narrative.ts · tally.ts
+            provenance.ts (the receipt primitives — node:crypto, pure)
   tui/      cli.tsx (entry) · ReplayApp · App (panel) · InputBar · WorkCard · viewModel · replay
-  export/   cardSvg.ts (SVG poster) · exportCard.ts · replayTape.ts · exportReplay.ts (gif/mp4)
+  export/   cardSvg.ts (SVG poster) · cardFace.ts · exportCard.ts · replayTape.ts · exportReplay.ts (gif/mp4)
+            cardProvenance.ts (compute + verify, shared by export & verify) · verifyCard.ts (the CLI)
+  test/     synthSession.ts (a contract-faithful synthetic session so the honesty suites run in CI)
 docs/       EVENT-DICTIONARY.md · DATA-CONTRACT.md (the parser spec) · shots/
 ```
 
@@ -80,5 +115,7 @@ by `message.id`; subagents are attributed by `agentId`. Run `npm test`.
 ## Status
 
 Observe + replay works on real transcripts, end-to-end. The data spine is honest and tested; the
-panel, the 作品 card, and static/animated export are complete. Control (approve / pause /
-reroute) is intentionally out of scope until observation is trusted.
+panel, the 作品 card, static/animated export, and **verifiable provenance** are complete. The
+honesty suites run on every push (CI, Node 20 + 22) against a synthetic session, so the guarantees
+are checked without needing the private fixture. Control (approve / pause / reroute) is
+intentionally out of scope until observation is trusted.
