@@ -72,6 +72,10 @@ it re-derives everything from scratch:
 npm run verify:card agentcity-card.svg ~/.claude/projects/<project>/<sessionId>.jsonl
 # ✓ 收据自洽 / 模式一致 / 原始字节指纹 / 声明指纹 / 完整指纹 / 卡面完整性 …
 # ✓ 一致：这张卡如实呈现 <transcript>   → exit 0
+
+# Try it on the bundled sample (a secret-free synthetic session — no setup, no private data):
+npm run verify:card docs/shots/card-sample.svg docs/shots/card-sample.session.json   # → exit 0
+# edit any number in card-sample.svg and re-run → exit 1 (the whole-card gate catches it)
 ```
 
 The guarantee (`verifyCard.ts`): **exit 0 ⟺ the embedded receipt matches the transcript *and*

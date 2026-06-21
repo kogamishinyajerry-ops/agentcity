@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="820" height="630" viewBox="0 0 820 630" font-family="'SF Mono','JetBrains Mono',ui-monospace,Menlo,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',monospace">
-  <!-- agentcity verifiable card · fp 87db2e671830 · verify: tsx src/export/verifyCard.ts (card.svg) (transcript.jsonl) -->
-  <metadata id="ac-prov">eyJ2IjoxLCJtb2RlIjoibWV0cmljcyIsImlucHV0Q291bnQiOjEsInRyYW5zY3JpcHRIYXNoIjoiZWVlZDk0ZDUxOTJjOTRjZGM0Mzk3NzIxODYyY2VlNzI4YWI1MGExMWJkYmVhMzMzNzlmZmFjNmYyMWZjNGUxZiIsImNsYWltSGFzaCI6Ijc0M2E2MDk4MDY3MjMxOGZlM2U5NDExNmFhZTI3MTk2MWI4ZDRiNzUxNzc5NWYxOTY4N2RiYzVjM2FlZWMxN2IiLCJmaW5nZXJwcmludCI6Ijg3ZGIyZTY3MTgzMDcxZGRhOGZhZmRkODM0NTM5NjhiODI0OTUzZGY0OTU4NTkwY2YzMDRiMmYyYjVlMmU0MjMifQ==</metadata>
+  <!-- agentcity verifiable card · fp 9a0766fb84cb · verify: tsx src/export/verifyCard.ts (card.svg) (transcript.jsonl) -->
+  <metadata id="ac-prov">eyJ2IjoxLCJtb2RlIjoibWV0cmljcyIsImlucHV0Q291bnQiOjEsInRyYW5zY3JpcHRIYXNoIjoiMzllNTRmYTZhYzZkMTZhZjMxNjc4YmE5NDdhOWUyZWFjZWViYjkxZmFlYjVkMWFkZGY5MTc4ZjI4ZjBkOWE0OSIsImNsYWltSGFzaCI6Ijc0M2E2MDk4MDY3MjMxOGZlM2U5NDExNmFhZTI3MTk2MWI4ZDRiNzUxNzc5NWYxOTY4N2RiYzVjM2FlZWMxN2IiLCJmaW5nZXJwcmludCI6IjlhMDc2NmZiODRjYjRhMWYyMGYxMTFkYThkNDkxNzBhNDg0YzVhZGRlODk3ZDliMjc0NDA5MWIyNmRjMjNlNWEifQ==</metadata>
   <rect x="1.5" y="1.5" width="817" height="627" rx="22" fill="#1e1e2e" stroke="#313244" stroke-width="1.5"/>
   <text x="60" y="48" font-size="15" letter-spacing="3" fill="#6c7086">agentcity</text>
   <text x="60" y="96" font-size="19" fill="#6c7086">愿望 · <tspan id="ac-wish" fill="#cdd6f4">把这个项目从 3D 网页迁移到极简 TUI</tspan></text>
@@ -8,7 +8,7 @@
   <text id="ac-hero" x="60" y="252" font-size="104" font-weight="700" fill="#f9e2af">22</text>
   <text x="60" y="294" font-size="18" fill="#6c7086">步　·　你亲手 <tspan fill="#89dceb" font-weight="700">0</tspan> 步</text>
   <text id="ac-include" x="60" y="352" font-size="16" fill="#6c7086">包括 8读·6改·3写·4命令·1帮手·1报错没停·1清洗</text>
-  <text x="60" y="392" font-size="16" fill="#6c7086"><tspan id="ac-dur">42 分 0 秒</tspan>　·　<tspan fill="#a6e3a1">✓ <tspan id="ac-seal">87db2e671830</tspan> · 与记录一致·可独立核验</tspan></text>
+  <text x="60" y="392" font-size="16" fill="#6c7086"><tspan id="ac-dur">42 分 0 秒</tspan>　·　<tspan fill="#a6e3a1">✓ <tspan id="ac-seal">9a0766fb84cb</tspan> · 与记录一致·可独立核验</tspan></text>
   <line x1="60" y1="420" x2="760" y2="420" stroke="#45475a" stroke-width="1"/>
   <text x="60" y="444" font-size="13" letter-spacing="2" fill="#6c7086">一路走来　·　共 6 个转折</text>
   <text x="60" y="474" font-size="15" fill="#6c7086">├ <tspan fill="#cdd6f4">开始干活</tspan></text>
