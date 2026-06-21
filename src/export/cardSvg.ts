@@ -50,6 +50,24 @@ function clip(s: string, n: number): string {
   return t.length > n ? t.slice(0, n) + '…' : t;
 }
 
+/** Wrap an (already-clipped) wish into at most `maxLines` lines of ~`per` chars —
+ *  the card's 认领 anchor reads as a full sentence, not a one-line fragment. */
+function wrapWish(s: string, per: number, maxLines = 2): string[] {
+  const t = s.replace(/\s+/g, ' ').trim();
+  if (!t) return [];
+  const lines: string[] = [];
+  let rest = t;
+  while (rest.length && lines.length < maxLines) {
+    if (rest.length <= per || lines.length === maxLines - 1) {
+      lines.push(rest);
+      break;
+    }
+    lines.push(rest.slice(0, per));
+    rest = rest.slice(per);
+  }
+  return lines;
+}
+
 /** Render a finished run's PanelModel as a standalone SVG poster string. When a
  *  `provenance` is supplied the card is independently verifiable (verifyCard.ts). */
 export function renderCardSvg(model: PanelModel, provenance?: Provenance): string {
@@ -67,9 +85,20 @@ export function renderCardSvg(model: PanelModel, provenance?: Provenance): strin
   const journeyTotal = model.finale?.journeyTotal ?? allJourney.length;
   const journey = face.wish ? allJourney.filter((b) => b.act !== 'ask') : allJourney;
 
-  const wishLine = face.wish
-    ? `<text x="${X}" y="96" font-size="19" fill="${C.dim}">愿望 · <tspan id="ac-wish" fill="${C.text}">${esc(face.wish)}</tspan></text>`
-    : '';
+  // The wish wraps to ≤2 lines (the 认领 anchor, shown in full). Extra lines push
+  // everything below down by `base`; the layout stays deterministic so the whole-card
+  // gate still binds. Line 1 carries the 「愿望 · 」 label + the ac-wish id; line 2 is
+  // indented to align under the wish text.
+  const WISH_LH = 28;
+  const wishLines = face.wish ? wrapWish(face.wish, 32) : [];
+  const base = wishLines.length > 1 ? (wishLines.length - 1) * WISH_LH : 0;
+  const wishBlock = wishLines
+    .map((ln, i) =>
+      i === 0
+        ? `<text x="${X}" y="96" font-size="19" fill="${C.dim}">愿望 · <tspan id="ac-wish" fill="${C.text}">${esc(ln)}</tspan></text>`
+        : `<text x="${X + 56}" y="${96 + i * WISH_LH}" font-size="19" fill="${C.text}">${esc(ln)}</text>`
+    )
+    .join('\n  ');
 
   // The seal: when verifiable, the short fingerprint is its own tagged tspan so
   // verifyCard reads back EXACTLY the fp (not the surrounding slogan). The fp alone
@@ -91,21 +120,22 @@ export function renderCardSvg(model: PanelModel, provenance?: Provenance): strin
   // The dur·✓seal "stamp" sits at a FIXED y ABOVE any journey, so a casual
   // screenshot that crops the bottom can never lose the verifiable seal (the
   // variable-length journey is what lives at the croppable bottom edge instead).
-  const STAMP_Y = 392;
+  // `base` shifts everything below the wish down when the wish wrapped to 2 lines.
+  const STAMP_Y = 392 + base;
   const upper = `
   <text x="${X}" y="48" font-size="15" letter-spacing="3" fill="${C.dim}">agentcity</text>
-  ${wishLine}
-  <text x="${X}" y="156" font-size="17" fill="${C.dim}">它替你跑了</text>
-  <text id="ac-hero" x="${X}" y="252" font-size="104" font-weight="700" fill="${C.hero}">${esc(face.hero)}</text>
-  <text x="${X}" y="294" font-size="18" fill="${C.dim}">步　·　你亲手 <tspan fill="${C.human}" font-weight="700">0</tspan> 步</text>
-  <text id="ac-include" x="${X}" y="352" font-size="16" fill="${C.dim}">${esc(face.include)}</text>
+  ${wishBlock}
+  <text x="${X}" y="${156 + base}" font-size="17" fill="${C.dim}">它替你跑了</text>
+  <text id="ac-hero" x="${X}" y="${252 + base}" font-size="104" font-weight="700" fill="${C.hero}">${esc(face.hero)}</text>
+  <text x="${X}" y="${294 + base}" font-size="18" fill="${C.dim}">步　·　你亲手 <tspan fill="${C.human}" font-weight="700">0</tspan> 步</text>
+  <text id="ac-include" x="${X}" y="${352 + base}" font-size="16" fill="${C.dim}">${esc(face.include)}</text>
   <text x="${X}" y="${STAMP_Y}" font-size="16" fill="${C.dim}"><tspan id="ac-dur">${esc(face.dur)}</tspan>　·　<tspan fill="${C.seal}">${sealInner}</tspan></text>`;
 
   // Optional journey block — a compact "一路走来" timeline below the stamp. The
   // height grows with the (bounded, ≤5) beat count; with no journey the card is
-  // exactly the classic 450-tall poster.
+  // exactly the classic 450-tall poster (plus any wish-wrap `base`).
   let journeyBlock = '';
-  let H = 450;
+  let H = 450 + base;
   if (journey.length > 0) {
     const DIV_Y = STAMP_Y + 28;
     const HEAD_Y = DIV_Y + 24;

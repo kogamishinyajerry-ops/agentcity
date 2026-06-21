@@ -59,6 +59,18 @@ describe('verifyAgainstTranscript — untampered', () => {
     expect(svg).not.toContain('ac-wish');
     expect(verifyAgainstTranscript(svg, { provenance, model }).ok).toBe(true);
   });
+  it('wraps a long wish to two lines (the 认领 anchor in full) and still verifies', () => {
+    const longWish = '我想做一款和杀戮尖塔一样好玩的冒险类游戏，但是不依赖复杂的动画UI，却能获得类似的快感';
+    const { model, provenance, svg } = build({ intent: longWish });
+    expect(svg).toContain(longWish.slice(0, 12)); // line 1
+    expect(svg).toContain(longWish.slice(38, 48)); // line 2 — the part a one-line clip would have dropped
+    // the card grew to fit the second wish line (taller than a single-wish-line card)
+    const tall = Number(svg.match(/height="(\d+)"/)![1]);
+    const { svg: shortSvg } = build({ intent: '做个登录页' });
+    const short = Number(shortSvg.match(/height="(\d+)"/)![1]);
+    expect(tall).toBeGreaterThan(short);
+    expect(verifyAgainstTranscript(svg, { provenance, model }).ok).toBe(true); // whole-card gate binds both lines
+  });
 });
 
 describe('verifyAgainstTranscript — visible-face tampering (the binding the review demanded)', () => {

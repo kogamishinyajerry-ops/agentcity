@@ -20,7 +20,10 @@ export function clipFace(s: string, n: number): string {
   return t.length > n ? t.slice(0, n) + '…' : t;
 }
 
-export const WISH_CLIP = 28;
+// The wish is the card's 「认领」 anchor — what the human actually asked for — so it
+// gets up to two wrapped lines on the card (≈2×32 chars) instead of one clipped
+// fragment. Bound by the whole-card re-render gate like everything else.
+export const WISH_CLIP = 64;
 
 /** The canonical visible strings of a card. Whatever appears on the SVG face for
  *  these fields MUST equal these exactly (verifyCard re-derives + compares). */
