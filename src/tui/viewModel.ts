@@ -121,9 +121,12 @@ export interface FinaleStat {
   value: number;
 }
 
-/** One line of the finale "一路走来" journey — a real turning-point beat. */
+/** One line of the finale "一路走来" journey — a real turning-point beat. `text`
+ *  is the city-metaphor gloss (TUI, where the city anchors it); `plain` is the
+ *  standalone-card gloss (plain-language, names the real artifact touched). */
 export interface JourneyBeat {
   text: string;
+  plain?: string;
   drama: boolean;
 }
 
@@ -150,7 +153,7 @@ function buildFinale(session: ParsedSession, laborSteps: number): FinaleModel {
     laborSteps,
     stats: t.stats.map((s) => ({ key: s.key, value: s.value })),
     punchline: `人只说了要做什么 —— 剩下 ${laborSteps} 步,它自己干完了。`,
-    journey: arc.beats.map((b) => ({ text: b.text, drama: b.tone === 'drama' })),
+    journey: arc.beats.map((b) => ({ text: b.text, plain: b.plain, drama: b.tone === 'drama' })),
     journeyTotal: arc.total,
   };
 }

@@ -162,6 +162,50 @@ describe('narrativeBeats — the plain-language story skeleton', () => {
   });
 });
 
+describe('beat.plain — the standalone-card gloss (plain language + named artifacts, verbatim)', () => {
+  it('names the real file a FILE_EDIT error touched, VERBATIM (city metaphor stays in text)', () => {
+    const beats = narrativeBeats(sess([ev(1, 'SESSION_START'), ev(5, 'FILE_EDIT', { isError: true, targetRef: 'cardSvg.ts' }), ev(9, 'AGENT_TURN_END')]));
+    const err = beats.find((b) => b.weight === 4)!;
+    expect(err.plain).toBe('改「cardSvg.ts」时出错了'); // named, verbatim from targetRef; no per-beat outcome claim
+    expect(err.text).toContain('工坊'); // TUI keeps the city metaphor
+  });
+  it('names the real command a SHELL_RUN error ran, stripped from the label', () => {
+    const beats = narrativeBeats(sess([ev(1, 'SESSION_START'), ev(5, 'SHELL_RUN', { isError: true, label: '$ npm test' }), ev(9, 'AGENT_TURN_END')]));
+    expect(beats.find((b) => b.weight === 4)!.plain).toBe('跑「npm test」时出错了');
+  });
+  it('falls back to a GENERIC plain gloss when the event has no named target (never invents one)', () => {
+    const beats = narrativeBeats(sess([ev(1, 'SESSION_START'), ev(5, 'FILE_EDIT', { isError: true }), ev(9, 'AGENT_TURN_END')]));
+    expect(beats.find((b) => b.weight === 4)!.plain).toBe('有一步出错了');
+  });
+  it('states only observed facts — no per-beat resilience ("没停下") or completion ("干完") claim', () => {
+    const beats = narrativeBeats(sess([ev(1, 'SESSION_START'), ev(5, 'FILE_EDIT', { isError: true, targetRef: 'x.ts' }), ev(9, 'AGENT_TURN_END')]));
+    for (const b of beats) {
+      expect(b.plain).not.toContain('没停下'); // resilience is the aggregate stat's job
+      expect(b.plain).not.toContain('干完'); // the record ending ≠ the work succeeded
+    }
+  });
+  it('names the subagent a dispatch went to, from targetRef', () => {
+    const beats = narrativeBeats(sess([ev(1, 'SESSION_START'), ev(5, 'SUBAGENT_SPAWN', { targetRef: 'loop-auditor' }), ev(9, 'AGENT_TURN_END')]));
+    expect(beats.find((b) => b.text.includes('小队'))!.plain).toBe('分了个子任务给「loop-auditor」');
+  });
+  it('states a compaction cause only when observed (auto→满了, manual→主动, unknown→neutral)', () => {
+    const plainOf = (extra: Partial<WorldEvent>) =>
+      narrativeBeats(sess([ev(1, 'SESSION_START'), ev(5, 'COMPACTION', extra), ev(9, 'AGENT_TURN_END')])).find((b) => b.tone === 'drama')!.plain;
+    expect(plainOf({ detail: { trigger: 'auto' } })).toContain('满了'); // context pressure — the real cause
+    expect(plainOf({ detail: { trigger: 'manual' } })).toBe('🧠 主动整理压缩了一次记忆');
+    expect(plainOf({ detail: { trigger: 'manual' } })).not.toContain('满了'); // a manual /compact wasn't "full"
+    expect(plainOf({})).not.toContain('满了'); // unknown trigger → assert no unverified cause
+  });
+  it('every card gloss is plain — free of the city metaphor (which only the visible TUI city decodes)', () => {
+    const beats = narrativeBeats(sess([ev(1, 'SESSION_START'), ev(5, 'COMPACTION'), ev(7, 'SUBAGENT_SPAWN'), ev(9, 'AGENT_TURN_END')]));
+    for (const b of beats) {
+      expect(b.plain).toBeTruthy();
+      expect(b.plain).not.toContain('这座城');
+      expect(b.plain).not.toContain('小队');
+    }
+  });
+});
+
 describe('storyArc — the finale journey (honest highlights, never invented)', () => {
   // open(w5) + prompt(w3) + branch(w1) + spawn(w3) + error(w4) + compaction(w5) + mode(w1) + close(w5)
   const rich = () =>

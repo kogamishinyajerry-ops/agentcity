@@ -68,9 +68,13 @@ export function renderCardSvg(model: PanelModel, provenance?: Provenance): strin
     : '';
 
   // The seal: when verifiable, the short fingerprint is its own tagged tspan so
-  // verifyCard reads back EXACTLY the fp (not the surrounding slogan).
+  // verifyCard reads back EXACTLY the fp (not the surrounding slogan). The fp alone
+  // is an opaque hex string to a layperson, so it's paired with a plain-language
+  // promise — phrased onto what verify actually proves (the card is consistent with
+  // its record, independently checkable), NOT the record's own authenticity (which
+  // we explicitly do not vouch), so the line stays honest even read off a screenshot.
   const sealInner = provenance
-    ? `✓ <tspan id="ac-seal">${esc(short)}</tspan> · 可溯源`
+    ? `✓ <tspan id="ac-seal">${esc(short)}</tspan> · 与记录一致·可独立核验`
     : '✓ 数据来自真实记录';
 
   // Embedded receipt: a minimal comment (no `--`, no `<>`, no plaintext metrics)
@@ -107,7 +111,9 @@ export function renderCardSvg(model: PanelModel, provenance?: Provenance): strin
       .map((b, i) => {
         const connector = i === journey.length - 1 ? '└' : '├';
         const col = b.drama ? C.drama : C.text;
-        return `<text x="${X}" y="${ROW0 + i * ROW_H}" font-size="15" fill="${C.dim}">${connector} <tspan fill="${col}">${esc(clip(b.text, 40))}</tspan></text>`;
+        // a standalone card has no city to decode the metaphor → use the plain,
+        // artifact-named gloss (falls back to the city text only if plain is absent).
+        return `<text x="${X}" y="${ROW0 + i * ROW_H}" font-size="15" fill="${C.dim}">${connector} <tspan fill="${col}">${esc(clip(b.plain ?? b.text, 40))}</tspan></text>`;
       })
       .join('\n  ');
     // "共 N 个转折" only when the journey is a capped highlights pick — never silent.

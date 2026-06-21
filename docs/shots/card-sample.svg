@@ -8,12 +8,12 @@
   <text id="ac-hero" x="60" y="252" font-size="104" font-weight="700" fill="#f9e2af">22</text>
   <text x="60" y="294" font-size="18" fill="#6c7086">步　·　你亲手 <tspan fill="#89dceb" font-weight="700">0</tspan> 步</text>
   <text id="ac-include" x="60" y="352" font-size="16" fill="#6c7086">包括 8读·6改·3写·4命令·1帮手·1报错没停·1清洗</text>
-  <text x="60" y="392" font-size="16" fill="#6c7086"><tspan id="ac-dur">42 分 0 秒</tspan>　·　<tspan fill="#a6e3a1">✓ <tspan id="ac-seal">87db2e671830</tspan> · 可溯源</tspan></text>
+  <text x="60" y="392" font-size="16" fill="#6c7086"><tspan id="ac-dur">42 分 0 秒</tspan>　·　<tspan fill="#a6e3a1">✓ <tspan id="ac-seal">87db2e671830</tspan> · 与记录一致·可独立核验</tspan></text>
   <line x1="60" y1="420" x2="760" y2="420" stroke="#45475a" stroke-width="1"/>
   <text x="60" y="444" font-size="13" letter-spacing="2" fill="#6c7086">一路走来　·　共 6 个转折</text>
-  <text x="60" y="474" font-size="15" fill="#6c7086">├ <tspan fill="#cdd6f4">这座城开工了</tspan></text>
+  <text x="60" y="474" font-size="15" fill="#6c7086">├ <tspan fill="#cdd6f4">开始干活</tspan></text>
   <text x="60" y="504" font-size="15" fill="#6c7086">├ <tspan fill="#cdd6f4">你说:「把这个项目从 3D 网页迁移到极简 TUI」</tspan></text>
-  <text x="60" y="534" font-size="15" fill="#6c7086">├ <tspan fill="#cdd6f4">出岔子了 —— 命令场那边失败了</tspan></text>
-  <text x="60" y="564" font-size="15" fill="#6c7086">├ <tspan fill="#cba6f7">🧠 记忆被压缩 —— 这座城的记忆要抹掉、重写一遍</tspan></text>
-  <text x="60" y="594" font-size="15" fill="#6c7086">└ <tspan fill="#cdd6f4">这段记录到此结束</tspan></text>
+  <text x="60" y="534" font-size="15" fill="#6c7086">├ <tspan fill="#cdd6f4">跑「npm test」时出错了</tspan></text>
+  <text x="60" y="564" font-size="15" fill="#6c7086">├ <tspan fill="#cba6f7">🧠 记忆整理压缩了一次</tspan></text>
+  <text x="60" y="594" font-size="15" fill="#6c7086">└ <tspan fill="#cdd6f4">这段记录到此为止</tspan></text>
 </svg>

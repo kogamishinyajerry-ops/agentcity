@@ -34,7 +34,8 @@ describe('renderCardSvg (作品 poster export)', () => {
     expect(svg).toContain(`>${model.laborSteps}</text>`);
     expect(svg).toContain(SYNTH_WISH);
     expect(svg).toContain('你亲手');
-    expect(svg).toContain('可溯源');
+    // the fp hex is paired with a plain-language trust promise (legible to a layperson)
+    expect(svg).toContain('可独立核验');
     // the seal is the real short fingerprint, not a static slogan
     expect(svg).toContain(provenance.short);
     expect(svg).not.toContain('全程真实可溯源');
@@ -66,10 +67,12 @@ describe('renderCardSvg (作品 poster export)', () => {
     expect(/&(?!amp;|lt;|gt;|#)/.test(svg)).toBe(false);
   });
 
-  it('renders the "一路走来" journey from real beats, with an honest truncation label', () => {
+  it('renders the "一路走来" journey from real beats (PLAIN gloss on the card), with an honest truncation label', () => {
     expect(svg).toContain('一路走来');
-    // the journey beats are the model's, in order, never invented
-    for (const b of model.finale!.journey) expect(svg).toContain(b.text.slice(0, 8));
+    // the card uses the PLAIN, artifact-named gloss (the city metaphor needs the
+    // visible city, so it stays in the TUI) — and the beats are the model's, never invented
+    for (const b of model.finale!.journey) expect(svg).toContain((b.plain ?? b.text).slice(0, 8));
+    expect(svg).not.toContain('这座城'); // no orphaned city metaphor on a standalone card
     // a capped highlights pick must disclose the real total, never silently drop
     if (model.finale!.journeyTotal > model.finale!.journey.length) {
       expect(svg).toContain(`共 ${model.finale!.journeyTotal} 个转折`);

@@ -15,7 +15,13 @@ import { eventToDistrict } from './mapping.ts';
 /** A single caption shown while the playhead sits at/after `seq`. */
 export interface NarrativeBeat {
   seq: number;
+  /** The city-metaphor gloss — for the TUI, where the city is on screen to anchor it. */
   text: string;
+  /** A plain-language gloss for a STANDALONE card (no city visible to decode the
+   *  metaphor), naming the concrete artifact this turning point actually touched
+   *  (a file basename / command / subagent) VERBATIM from the redacted event — never
+   *  inferred. Absent on hand-built test beats → callers fall back to `text`. */
+  plain?: string;
   /** 'drama' beats (a compaction) also cue the ceremonial cutscene. */
   tone: 'normal' | 'drama';
   /** Significance for the finale story-arc highlights pick (higher = kept first).
@@ -46,9 +52,32 @@ function clip(s: string, n: number): string {
   return t.length > n ? t.slice(0, n) + '…' : t;
 }
 
+/** The concrete artifact a beat touched, as a plain verb + redacted name, VERBATIM
+ *  from the parsed event (targetRef = basename/subagent; command lives in the label).
+ *  null when the event has no specific named target, so the gloss stays generic
+ *  instead of inventing a name. Names WHAT was touched — never why or an outcome. */
+function namedTarget(e: WorldEvent): string | null {
+  switch (e.kind) {
+    case 'FILE_EDIT':
+      return e.targetRef ? `改「${e.targetRef}」` : null;
+    case 'FILE_WRITE':
+      return e.targetRef ? `写「${e.targetRef}」` : null;
+    case 'FILE_READ':
+      return e.targetRef ? `读「${e.targetRef}」` : null;
+    case 'SHELL_RUN': {
+      const cmd = e.label.replace(/^\$\s*/, '').trim();
+      return cmd ? `跑「${clip(cmd, 18)}」` : null;
+    }
+    default:
+      return null;
+  }
+}
+
 /**
- * A plain-language caption for ONE real turning-point event, or null if this kind
- * is moment-to-moment noise the city already shows (so it earns no caption).
+ * A caption for ONE real turning-point event, or null if this kind is moment-to-
+ * moment noise the city already shows (so it earns no caption). `text` is the
+ * city-metaphor gloss (TUI); `plain` is the standalone-card gloss, naming the real
+ * artifact where the event has one (errors → the file/command that errored, etc.).
  */
 function beatFor(e: WorldEvent, firstSeq: number): NarrativeBeat | null {
   // TOOL_FAIL is the overlay twin of an originating tool event that already carries
@@ -56,34 +85,65 @@ function beatFor(e: WorldEvent, firstSeq: number): NarrativeBeat | null {
   if (e.kind === 'TOOL_FAIL') return null;
   // an error on any real tool event is a turning point regardless of kind
   if (e.isError) {
-    return { seq: e.seq, text: `出岔子了 —— ${DISTRICT_CN[eventToDistrict(e.kind)]}那边失败了`, tone: 'normal', weight: 4 };
+    const t = namedTarget(e);
+    // State only the observed fact (this step errored) + name what it touched. The
+    // resilience framing ("didn't stop") is the AGGREGATE's job (the 报错没停 stat),
+    // not a per-beat claim — "this error specifically was survived" isn't verified here.
+    return {
+      seq: e.seq,
+      text: `出岔子了 —— ${DISTRICT_CN[eventToDistrict(e.kind)]}那边失败了`,
+      plain: t ? `${t}时出错了` : '有一步出错了',
+      tone: 'normal',
+      weight: 4,
+    };
   }
   switch (e.kind) {
     case 'SESSION_RESUME':
-      return { seq: e.seq, text: '接着上一次，继续干', tone: 'normal', weight: 2 };
+      return { seq: e.seq, text: '接着上一次，继续干', plain: '接着上次，继续干', tone: 'normal', weight: 2 };
     case 'USER_PROMPT': {
       // the real (already-redacted) prompt text IS the story — show it verbatim
       // (bounded), not a generic line. Falls back only if the label is empty.
       const said = e.label ? clip(e.label, 30) : '';
-      return { seq: e.seq, text: said ? `你说:「${said}」` : '你交代了一件事', tone: 'normal', weight: 3 };
+      const line = said ? `你说:「${said}」` : '你交代了一件事';
+      return { seq: e.seq, text: line, plain: line, tone: 'normal', weight: 3 };
     }
     case 'SUBAGENT_SPAWN':
-      return { seq: e.seq, text: '派出一支小队去帮忙', tone: 'normal', weight: 3 };
+      return {
+        seq: e.seq,
+        text: '派出一支小队去帮忙',
+        plain: e.targetRef ? `分了个子任务给「${clip(e.targetRef, 18)}」` : '分了个子任务去做',
+        tone: 'normal',
+        weight: 3,
+      };
     case 'SUBAGENT_RESULT':
-      return { seq: e.seq, text: '小队回来交活了', tone: 'normal', weight: 2 };
+      // "回来了" (returned) is observed; avoid "做完/交活" which would claim the
+      // subagent SUCCEEDED — the result event doesn't verify the outcome's quality.
+      return { seq: e.seq, text: '小队回来交活了', plain: '子任务回来了', tone: 'normal', weight: 2 };
     case 'WORKFLOW_LAUNCH':
-      return { seq: e.seq, text: '开了一套多智能体编排', tone: 'normal', weight: 3 };
-    case 'COMPACTION':
-      return { seq: e.seq, text: '🧠 记忆被压缩 —— 这座城的记忆要抹掉、重写一遍', tone: 'drama', weight: 5 };
+      return { seq: e.seq, text: '开了一套多智能体编排', plain: '开了一套多步自动编排', tone: 'normal', weight: 3 };
+    case 'COMPACTION': {
+      // "满了" (memory full) is only the real cause for an AUTO compaction (context
+      // pressure); a MANUAL one is the user running /compact, so claiming "full"
+      // there would assert a why the transcript contradicts. Read the captured
+      // trigger and state the cause only when it's observed.
+      const trigger = e.detail?.trigger;
+      const plain =
+        trigger === 'manual'
+          ? '🧠 主动整理压缩了一次记忆'
+          : trigger === 'auto'
+            ? '🧠 记忆满了，整理压缩了一次'
+            : '🧠 记忆整理压缩了一次';
+      return { seq: e.seq, text: '🧠 记忆被压缩 —— 这座城的记忆要抹掉、重写一遍', plain, tone: 'drama', weight: 5 };
+    }
     case 'MODE_CHANGE':
       // the permission mode at the very FIRST event is a starting state, not a
       // switch — captioning it would mislead (and would mask the opening beat).
       if (e.seq === firstSeq) return null;
-      return { seq: e.seq, text: '权限边检 —— 切换了模式', tone: 'normal', weight: 1 };
+      return { seq: e.seq, text: '权限边检 —— 切换了模式', plain: '切换了权限模式', tone: 'normal', weight: 1 };
     case 'BRANCH_SWITCH':
-      return { seq: e.seq, text: '切到了另一条 git 分支', tone: 'normal', weight: 1 };
+      return { seq: e.seq, text: '切到了另一条 git 分支', plain: '切到了另一条 git 分支', tone: 'normal', weight: 1 };
     case 'MODEL_SWITCH':
-      return { seq: e.seq, text: '换了个「大脑」(切换模型)', tone: 'normal', weight: 1 };
+      return { seq: e.seq, text: '换了个「大脑」(切换模型)', plain: '换了个模型', tone: 'normal', weight: 1 };
     default:
       return null;
   }
@@ -103,15 +163,23 @@ export function narrativeBeats(session: ParsedSession): NarrativeBeat[] {
   const raw: NarrativeBeat[] = [];
   // opening beat — use the real session title when we have one
   const title = session.meta.title ? clip(session.meta.title, 22) : '';
-  raw.push({ seq: firstSeq, text: title ? `开工 ·「${title}」` : '这座城开工了', tone: 'normal', weight: 5 });
+  raw.push({
+    seq: firstSeq,
+    text: title ? `开工 ·「${title}」` : '这座城开工了',
+    plain: title ? `开始干活 ·「${title}」` : '开始干活',
+    tone: 'normal',
+    weight: 5,
+  });
 
   for (const e of events) {
     const b = beatFor(e, firstSeq);
     if (b) raw.push(b);
   }
 
-  // closing beat — the transcript itself ends here (always true, never fabricated)
-  raw.push({ seq: lastSeq, text: '这段记录到此结束', tone: 'normal', weight: 5 });
+  // closing beat — the transcript itself ends here (always true, never fabricated).
+  // plain avoids "干完/完成" (the record ending doesn't prove the work succeeded) —
+  // it states only that the record reaches its end here.
+  raw.push({ seq: lastSeq, text: '这段记录到此结束', plain: '这段记录到此为止', tone: 'normal', weight: 5 });
 
   // sort by seq (events are ordered, but the synthesized open/close need placing)
   raw.sort((a, b) => a.seq - b.seq);
