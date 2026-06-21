@@ -12,6 +12,13 @@
 import type { ParsedSession, WorldEvent, DistrictKind } from './types.ts';
 import { eventToDistrict } from './mapping.ts';
 
+/** The kind of turning point, grouped into the four "acts" of a run's arc. The
+ *  finale highlights pick spans DIFFERENT acts before doubling up on one, so the
+ *  journey reads as a story (asked → did → drama) rather than a severity cluster
+ *  (e.g. three errors). Derived from the event kind — transcript-grounded, editorial
+ *  only about ordering of equally-real beats. */
+export type BeatAct = 'ask' | 'work' | 'drama' | 'shift';
+
 /** A single caption shown while the playhead sits at/after `seq`. */
 export interface NarrativeBeat {
   seq: number;
@@ -24,6 +31,8 @@ export interface NarrativeBeat {
   plain?: string;
   /** 'drama' beats (a compaction) also cue the ceremonial cutscene. */
   tone: 'normal' | 'drama';
+  /** Which act of the arc this beat belongs to (for variety-first highlights). */
+  act?: BeatAct;
   /** Significance for the finale story-arc highlights pick (higher = kept first).
    *  Not editorial about WHAT happened — only which real turning points headline a
    *  capped recap. Absent on hand-built test beats (treated as 0). */
@@ -94,18 +103,19 @@ function beatFor(e: WorldEvent, firstSeq: number): NarrativeBeat | null {
       text: `出岔子了 —— ${DISTRICT_CN[eventToDistrict(e.kind)]}那边失败了`,
       plain: t ? `${t}时出错了` : '有一步出错了',
       tone: 'normal',
+      act: 'drama',
       weight: 4,
     };
   }
   switch (e.kind) {
     case 'SESSION_RESUME':
-      return { seq: e.seq, text: '接着上一次，继续干', plain: '接着上次，继续干', tone: 'normal', weight: 2 };
+      return { seq: e.seq, text: '接着上一次，继续干', plain: '接着上次，继续干', tone: 'normal', act: 'shift', weight: 2 };
     case 'USER_PROMPT': {
       // the real (already-redacted) prompt text IS the story — show it verbatim
       // (bounded), not a generic line. Falls back only if the label is empty.
       const said = e.label ? clip(e.label, 30) : '';
       const line = said ? `你说:「${said}」` : '你交代了一件事';
-      return { seq: e.seq, text: line, plain: line, tone: 'normal', weight: 3 };
+      return { seq: e.seq, text: line, plain: line, tone: 'normal', act: 'ask', weight: 3 };
     }
     case 'SUBAGENT_SPAWN':
       return {
@@ -113,14 +123,15 @@ function beatFor(e: WorldEvent, firstSeq: number): NarrativeBeat | null {
         text: '派出一支小队去帮忙',
         plain: e.targetRef ? `分了个子任务给「${clip(e.targetRef, 18)}」` : '分了个子任务去做',
         tone: 'normal',
+        act: 'work',
         weight: 3,
       };
     case 'SUBAGENT_RESULT':
       // "回来了" (returned) is observed; avoid "做完/交活" which would claim the
       // subagent SUCCEEDED — the result event doesn't verify the outcome's quality.
-      return { seq: e.seq, text: '小队回来交活了', plain: '子任务回来了', tone: 'normal', weight: 2 };
+      return { seq: e.seq, text: '小队回来交活了', plain: '子任务回来了', tone: 'normal', act: 'work', weight: 2 };
     case 'WORKFLOW_LAUNCH':
-      return { seq: e.seq, text: '开了一套多智能体编排', plain: '开了一套多步自动编排', tone: 'normal', weight: 3 };
+      return { seq: e.seq, text: '开了一套多智能体编排', plain: '开了一套多步自动编排', tone: 'normal', act: 'work', weight: 3 };
     case 'COMPACTION': {
       // "满了" (memory full) is only the real cause for an AUTO compaction (context
       // pressure); a MANUAL one is the user running /compact, so claiming "full"
@@ -133,17 +144,17 @@ function beatFor(e: WorldEvent, firstSeq: number): NarrativeBeat | null {
           : trigger === 'auto'
             ? '🧠 记忆满了，整理压缩了一次'
             : '🧠 记忆整理压缩了一次';
-      return { seq: e.seq, text: '🧠 记忆被压缩 —— 这座城的记忆要抹掉、重写一遍', plain, tone: 'drama', weight: 5 };
+      return { seq: e.seq, text: '🧠 记忆被压缩 —— 这座城的记忆要抹掉、重写一遍', plain, tone: 'drama', act: 'drama', weight: 5 };
     }
     case 'MODE_CHANGE':
       // the permission mode at the very FIRST event is a starting state, not a
       // switch — captioning it would mislead (and would mask the opening beat).
       if (e.seq === firstSeq) return null;
-      return { seq: e.seq, text: '权限边检 —— 切换了模式', plain: '切换了权限模式', tone: 'normal', weight: 1 };
+      return { seq: e.seq, text: '权限边检 —— 切换了模式', plain: '切换了权限模式', tone: 'normal', act: 'shift', weight: 1 };
     case 'BRANCH_SWITCH':
-      return { seq: e.seq, text: '切到了另一条 git 分支', plain: '切到了另一条 git 分支', tone: 'normal', weight: 1 };
+      return { seq: e.seq, text: '切到了另一条 git 分支', plain: '切到了另一条 git 分支', tone: 'normal', act: 'shift', weight: 1 };
     case 'MODEL_SWITCH':
-      return { seq: e.seq, text: '换了个「大脑」(切换模型)', plain: '换了个模型', tone: 'normal', weight: 1 };
+      return { seq: e.seq, text: '换了个「大脑」(切换模型)', plain: '换了个模型', tone: 'normal', act: 'shift', weight: 1 };
     default:
       return null;
   }
@@ -235,9 +246,36 @@ export function storyArc(session: ParsedSession, max = 5): StoryArc {
   const open = beats[0];
   const close = beats[beats.length - 1];
   const middle = beats.slice(1, -1);
-  const kept = [...middle]
-    .sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0) || a.seq - b.seq)
-    .slice(0, Math.max(0, max - 2));
+  const slots = Math.max(0, max - 2);
+
+  // Variety-first pick: group the middle by act, each group ordered by significance
+  // (weight desc, then seq), then round-robin across acts in arc-priority order. This
+  // guarantees the highlights span DIFFERENT kinds of turning point — the run's arc
+  // (a dramatic moment, an ask, the work) — before doubling up on one, so a run with
+  // several errors doesn't fill every slot with errors and bury what was asked/done.
+  // Still a pick of REAL beats; `total` already discloses everything not shown.
+  const PRIORITY: BeatAct[] = ['drama', 'ask', 'work', 'shift'];
+  const groups = new Map<BeatAct, NarrativeBeat[]>();
+  for (const b of middle) {
+    const a = b.act ?? 'shift';
+    const g = groups.get(a);
+    if (g) g.push(b);
+    else groups.set(a, [b]);
+  }
+  for (const g of groups.values()) g.sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0) || a.seq - b.seq);
+  const kept: NarrativeBeat[] = [];
+  let progressed = true;
+  while (kept.length < slots && progressed) {
+    progressed = false;
+    for (const act of PRIORITY) {
+      if (kept.length >= slots) break;
+      const g = groups.get(act);
+      if (g && g.length) {
+        kept.push(g.shift()!);
+        progressed = true;
+      }
+    }
+  }
   const picked = [open, ...kept, close].sort((a, b) => a.seq - b.seq);
   return { beats: picked, total, truncated: true };
 }

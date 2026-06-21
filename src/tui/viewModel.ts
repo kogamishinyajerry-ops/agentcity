@@ -18,7 +18,7 @@ import { DISTRICT_LABEL, eventToDistrict, isUsageEvent } from '../model/mapping.
 import { computeSpotlight, type SpotlightAccent } from '../render/seekState.ts';
 import { compactionsUpTo, editsUpTo, failsUpTo } from '../hud/health.ts';
 import { endTally } from '../model/tally.ts';
-import { narrativeBeats, beatAtSeq, storyArc } from '../model/narrative.ts';
+import { narrativeBeats, beatAtSeq, storyArc, type BeatAct } from '../model/narrative.ts';
 
 /** Short Chinese gloss per district — what the building actually does. */
 const DISTRICT_DESC: Record<DistrictKind, string> = {
@@ -123,10 +123,12 @@ export interface FinaleStat {
 
 /** One line of the finale "一路走来" journey — a real turning-point beat. `text`
  *  is the city-metaphor gloss (TUI, where the city anchors it); `plain` is the
- *  standalone-card gloss (plain-language, names the real artifact touched). */
+ *  standalone-card gloss (plain-language, names the real artifact touched); `act`
+ *  lets the card drop ask-beats that would just repeat its dedicated 愿望 line. */
 export interface JourneyBeat {
   text: string;
   plain?: string;
+  act?: BeatAct;
   drama: boolean;
 }
 
@@ -153,7 +155,7 @@ function buildFinale(session: ParsedSession, laborSteps: number): FinaleModel {
     laborSteps,
     stats: t.stats.map((s) => ({ key: s.key, value: s.value })),
     punchline: `人只说了要做什么 —— 剩下 ${laborSteps} 步,它自己干完了。`,
-    journey: arc.beats.map((b) => ({ text: b.text, plain: b.plain, drama: b.tone === 'drama' })),
+    journey: arc.beats.map((b) => ({ text: b.text, plain: b.plain, act: b.act, drama: b.tone === 'drama' })),
     journeyTotal: arc.total,
   };
 }

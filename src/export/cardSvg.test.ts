@@ -70,11 +70,16 @@ describe('renderCardSvg (作品 poster export)', () => {
   it('renders the "一路走来" journey from real beats (PLAIN gloss on the card), with an honest truncation label', () => {
     expect(svg).toContain('一路走来');
     // the card uses the PLAIN, artifact-named gloss (the city metaphor needs the
-    // visible city, so it stays in the TUI) — and the beats are the model's, never invented
-    for (const b of model.finale!.journey) expect(svg).toContain((b.plain ?? b.text).slice(0, 8));
+    // visible city, so it stays in the TUI) — beats are the model's, never invented.
+    // Ask-beats are dropped on the card (the 愿望 line already shows the ask), so skip them.
+    for (const b of model.finale!.journey) {
+      if (b.act === 'ask') continue;
+      expect(svg).toContain((b.plain ?? b.text).slice(0, 8));
+    }
     expect(svg).not.toContain('这座城'); // no orphaned city metaphor on a standalone card
+    expect(svg).not.toContain('你说'); // the ask isn't repeated in the journey (it's the 愿望 line)
     // a capped highlights pick must disclose the real total, never silently drop
-    if (model.finale!.journeyTotal > model.finale!.journey.length) {
+    if (model.finale!.journeyTotal > model.finale!.journey.filter((b) => b.act !== 'ask').length) {
       expect(svg).toContain(`共 ${model.finale!.journeyTotal} 个转折`);
     }
     // the card grew past the classic 450 to fit the journey

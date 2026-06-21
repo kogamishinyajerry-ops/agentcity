@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="820" height="630" viewBox="0 0 820 630" font-family="'SF Mono','JetBrains Mono',ui-monospace,Menlo,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',monospace">
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="600" viewBox="0 0 820 600" font-family="'SF Mono','JetBrains Mono',ui-monospace,Menlo,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',monospace">
   <!-- agentcity verifiable card · fp 9a0766fb84cb · verify: tsx src/export/verifyCard.ts (card.svg) (transcript.jsonl) -->
   <metadata id="ac-prov">eyJ2IjoxLCJtb2RlIjoibWV0cmljcyIsImlucHV0Q291bnQiOjEsInRyYW5zY3JpcHRIYXNoIjoiMzllNTRmYTZhYzZkMTZhZjMxNjc4YmE5NDdhOWUyZWFjZWViYjkxZmFlYjVkMWFkZGY5MTc4ZjI4ZjBkOWE0OSIsImNsYWltSGFzaCI6Ijc0M2E2MDk4MDY3MjMxOGZlM2U5NDExNmFhZTI3MTk2MWI4ZDRiNzUxNzc5NWYxOTY4N2RiYzVjM2FlZWMxN2IiLCJmaW5nZXJwcmludCI6IjlhMDc2NmZiODRjYjRhMWYyMGYxMTFkYThkNDkxNzBhNDg0YzVhZGRlODk3ZDliMjc0NDA5MWIyNmRjMjNlNWEifQ==</metadata>
-  <rect x="1.5" y="1.5" width="817" height="627" rx="22" fill="#1e1e2e" stroke="#313244" stroke-width="1.5"/>
+  <rect x="1.5" y="1.5" width="817" height="597" rx="22" fill="#1e1e2e" stroke="#313244" stroke-width="1.5"/>
   <text x="60" y="48" font-size="15" letter-spacing="3" fill="#6c7086">agentcity</text>
   <text x="60" y="96" font-size="19" fill="#6c7086">愿望 · <tspan id="ac-wish" fill="#cdd6f4">把这个项目从 3D 网页迁移到极简 TUI</tspan></text>
   <text x="60" y="156" font-size="17" fill="#6c7086">它替你跑了</text>
@@ -12,8 +12,7 @@
   <line x1="60" y1="420" x2="760" y2="420" stroke="#45475a" stroke-width="1"/>
   <text x="60" y="444" font-size="13" letter-spacing="2" fill="#6c7086">一路走来　·　共 6 个转折</text>
   <text x="60" y="474" font-size="15" fill="#6c7086">├ <tspan fill="#cdd6f4">开始干活</tspan></text>
-  <text x="60" y="504" font-size="15" fill="#6c7086">├ <tspan fill="#cdd6f4">你说:「把这个项目从 3D 网页迁移到极简 TUI」</tspan></text>
-  <text x="60" y="534" font-size="15" fill="#6c7086">├ <tspan fill="#cdd6f4">跑「npm test」时出错了</tspan></text>
-  <text x="60" y="564" font-size="15" fill="#6c7086">├ <tspan fill="#cba6f7">🧠 记忆整理压缩了一次</tspan></text>
-  <text x="60" y="594" font-size="15" fill="#6c7086">└ <tspan fill="#cdd6f4">这段记录到此为止</tspan></text>
+  <text x="60" y="504" font-size="15" fill="#6c7086">├ <tspan fill="#cdd6f4">分了个子任务给「agent-explore-1」</tspan></text>
+  <text x="60" y="534" font-size="15" fill="#6c7086">├ <tspan fill="#cba6f7">🧠 记忆整理压缩了一次</tspan></text>
+  <text x="60" y="564" font-size="15" fill="#6c7086">└ <tspan fill="#cdd6f4">这段记录到此为止</tspan></text>
 </svg>

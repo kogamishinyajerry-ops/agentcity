@@ -240,13 +240,36 @@ describe('storyArc — the finale journey (honest highlights, never invented)', 
     expect(arc.beats[arc.beats.length - 1].text).toContain('结束');
   });
 
-  it('keeps the highest-significance beats (compaction, error) and drops low-weight switches', () => {
+  it('variety-first: spans acts (drama + ask + work), not the top-severity cluster', () => {
     const texts = storyArc(rich(), 5).beats.map((b) => b.text);
-    expect(texts.some((t) => t.includes('记忆'))).toBe(true); // compaction (w5, drama)
-    expect(texts.some((t) => t.includes('失败'))).toBe(true); // error (w4)
-    expect(texts.some((t) => t.includes('登录页'))).toBe(true); // prompt (w3)
-    expect(texts.some((t) => t.includes('分支'))).toBe(false); // branch switch (w1) dropped
-    expect(texts.some((t) => t.includes('权限'))).toBe(false); // mode switch (w1) dropped
+    expect(texts.some((t) => t.includes('记忆'))).toBe(true); // drama: compaction (top of its act)
+    expect(texts.some((t) => t.includes('登录页'))).toBe(true); // ask: the prompt
+    expect(texts.some((t) => t.includes('小队'))).toBe(true); // work: the dispatch
+    expect(texts.some((t) => t.includes('失败'))).toBe(false); // the lone error yields its slot to variety
+    expect(texts.some((t) => t.includes('分支'))).toBe(false); // low-weight switch dropped
+    expect(texts.some((t) => t.includes('权限'))).toBe(false);
+  });
+
+  it('errors no longer crowd out the arc — at most one error when other acts exist', () => {
+    // three DISTINCT-district failures + a dispatch + a compaction; severity-only
+    // selection would headline 3 errors, burying the work. Variety caps that.
+    const arc = storyArc(
+      sess([
+        ev(1, 'SESSION_START'),
+        ev(3, 'FILE_EDIT', { isError: true }), // 工坊 (drama)
+        ev(5, 'SHELL_RUN', { isError: true }), // 命令场 (drama)
+        ev(7, 'FILE_READ', { isError: true }), // 档案馆 (drama)
+        ev(9, 'SUBAGENT_SPAWN'), // work
+        ev(11, 'COMPACTION'), // drama (w5)
+        ev(20, 'AGENT_TURN_END'),
+      ]),
+      5
+    );
+    const texts = arc.beats.map((b) => b.text);
+    expect(texts.some((t) => t.includes('记忆'))).toBe(true); // the compaction (top drama)
+    expect(texts.some((t) => t.includes('小队'))).toBe(true); // the dispatch survives
+    expect(texts.filter((t) => t.includes('失败')).length).toBeLessThanOrEqual(1); // not 3 errors
+    expect(arc.total).toBe(7); // every distinct turning point still counted (开工+3错+派+压缩+结束)
   });
 
   it('shows the kept beats in true chronological (seq) order', () => {

@@ -60,8 +60,12 @@ export function renderCardSvg(model: PanelModel, provenance?: Provenance): strin
   // The journey ("一路走来") is the run's real turning points in order, straight
   // from the model (storyArc → transcript-derived). It's bound by the whole-card
   // re-render gate, so no beat here can be edited or invented without verify ✗.
-  const journey = model.finale?.journey ?? [];
-  const journeyTotal = model.finale?.journeyTotal ?? journey.length;
+  // When the card already shows the wish at top, drop ask-beats from the journey —
+  // re-printing 「你说:…」 would just repeat the 愿望 line. `journeyTotal` is the real
+  // count and is unchanged, so the honest 「共 N 个转折」 still discloses everything.
+  const allJourney = model.finale?.journey ?? [];
+  const journeyTotal = model.finale?.journeyTotal ?? allJourney.length;
+  const journey = face.wish ? allJourney.filter((b) => b.act !== 'ask') : allJourney;
 
   const wishLine = face.wish
     ? `<text x="${X}" y="96" font-size="19" fill="${C.dim}">愿望 · <tspan id="ac-wish" fill="${C.text}">${esc(face.wish)}</tspan></text>`
