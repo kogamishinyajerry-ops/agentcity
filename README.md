@@ -34,11 +34,11 @@ npx tsx src/tui/cli.tsx ~/.claude/projects/<project>/<sessionId>.jsonl
 npx tsx src/tui/cli.tsx ~/.claude/projects/<project>/<sessionId>.jsonl 798
 
 # turn a run into a shareable artifact:
-npm run export:card   <transcript> [out.svg]    # a static SVG poster (with an embedded receipt)
+npm run export:card   <transcript> [out.svg]    # SVG poster + (if a rasterizer is present) a verifiable PNG
 npm run export:replay <transcript> [out.gif]    # an animated gif + mp4 trailer
 
 # prove a card is faithful to its transcript (exit 0 = ✓, exit 1 = ✗ tampered/mismatched):
-npm run verify:card   <card.svg> <transcript.jsonl|parsed.json>
+npm run verify:card   <card.svg|card.png> <transcript.jsonl|parsed.json>
 ```
 
 Inside the replay the input bar takes a **seq number** (jump there), `card` (the 作品 card),
@@ -79,6 +79,15 @@ function, a genuine card is byte-identical to a re-render, so *any* edited numbe
 overlay headline, or injected element makes it differ and fail. The hash covers the full input
 set (the main `.jsonl` **plus** every file under the sibling `subagents/` tree), so multi-agent
 work is bound too. Everything runs locally with `node:crypto` — no network, no third party.
+
+**Shareable PNG (for platforms that won't render SVG).** When a system SVG rasterizer is present
+(`rsvg-convert` / `resvg` / `inkscape` / `magick` / macOS `qlmanage` — tried in turn until one
+works), `export:card` also writes a `.png` that **carries the exact SVG source inside a PNG text
+chunk**. `verify:card` accepts that PNG, extracts the embedded SVG, and runs the identical oracle —
+so a raster you post stays independently checkable. The verifier trusts **only the embedded SVG**,
+never the raster pixels: a verified PNG proves the *card's claims* are faithful; to confirm the
+pixels themselves, re-rasterize that SVG and compare. No native dependency is bundled — without a
+rasterizer you simply get the (already fully verifiable) SVG.
 
 **Honest scope:** this proves a card faithfully represents *that transcript*. It does **not**
 prove the transcript is an authentic Anthropic session — transcripts aren't provider-signed —

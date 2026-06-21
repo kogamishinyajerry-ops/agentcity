@@ -34,6 +34,7 @@ import {
 } from '../model/provenance.ts';
 import { cardFace } from './cardFace.ts';
 import { renderCardSvg } from './cardSvg.ts';
+import { isPng, readText, SVG_KEYWORD } from './pngChunks.ts';
 
 const MARK_OPEN = '<metadata id="ac-prov">';
 const MARK_CLOSE = '</metadata>';
@@ -125,6 +126,22 @@ export function computeCardProvenance(transcriptPath: string): {
   const transcriptHash = hashInputSet(files);
   const provenance = makeProvenance(mode, transcriptHash, files.length, metricsFrom(session, model));
   return { session, model, provenance };
+}
+
+/** Load a card's SVG source from a path that is EITHER a raw `.svg` file OR a
+ *  `.png` carrier with the SVG embedded in an iTXt chunk (the shareable raster for
+ *  platforms that won't render SVG). The verifier treats both identically — it only
+ *  ever trusts the embedded SVG, never the raster pixels. Fail-closed: a PNG with no
+ *  embedded card SVG throws (it's not an agentcity verifiable PNG), never silently
+ *  falling back to verifying pixels we can't check. */
+export function loadCardSvg(path: string): string {
+  const buf = readFileSync(path);
+  if (isPng(buf)) {
+    const svg = readText(buf, SVG_KEYWORD);
+    if (!svg) throw new Error('这个 PNG 内没有嵌入可验证的卡片 SVG(不是 agentcity 可验证 PNG)');
+    return svg;
+  }
+  return buf.toString('utf8');
 }
 
 /** Pull the embedded opaque receipt out of an SVG card (null if absent/corrupt/
