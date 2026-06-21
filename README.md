@@ -13,9 +13,11 @@ Point it at a `.jsonl` transcript and the run becomes a single Ink TUI panel:
   story beat (on a **compaction** the 旁白 turns violet: the city's memory being wiped and
   rebuilt, marked honestly as it happens);
 - a live error count that **catches fire** (🔥) when a tool fails;
-- a one-key **作品 card** + SVG / GIF export, so a run becomes a shareable artifact — and the
-  SVG card is **independently verifiable**: it embeds a fingerprint anyone can re-derive from the
-  original transcript to prove the card didn't lie (see [Verifiable provenance](#verifiable-provenance)).
+- a one-key **作品 card** + SVG / GIF export, so a run becomes a shareable artifact — the card
+  carries the run's **「一路走来」journey** (its real turning points in order, so an outsider can
+  *认领* the path the agent walked) beneath the headline, and is **independently verifiable**: it
+  embeds a fingerprint anyone can re-derive from the original transcript to prove the card didn't
+  lie (see [Verifiable provenance](#verifiable-provenance)).
 
 A single **input bar** drives everything — type a `seq` to jump, or `card` / `export` / `play`
 / `error` / `?` / `q`; `← →` step. No menus, no shortcut clutter.
@@ -76,7 +78,7 @@ The guarantee (`verifyCard.ts`): **exit 0 ⟺ the embedded receipt matches the t
 the card's *entire visible surface* is exactly what the renderer produces for that transcript.**
 The whole-card check (`卡面完整性`) is the airtight part — because the renderer is a pure
 function, a genuine card is byte-identical to a re-render, so *any* edited number, forged wish,
-overlay headline, or injected element makes it differ and fail. The hash covers the full input
+doctored journey beat, overlay headline, or injected element makes it differ and fail. The hash covers the full input
 set (the main `.jsonl` **plus** every file under the sibling `subagents/` tree), so multi-agent
 work is bound too. Everything runs locally with `node:crypto` — no network, no third party.
 
