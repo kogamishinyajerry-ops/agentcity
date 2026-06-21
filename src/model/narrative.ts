@@ -144,7 +144,12 @@ export interface StoryArc {
 }
 
 export function storyArc(session: ParsedSession, max = 5): StoryArc {
-  const beats = narrativeBeats(session);
+  // Dedupe identical-text beats first: a far-apart repeat (e.g. two same-district
+  // errors hours apart) is one KIND of turning point, not two — it shouldn't eat two
+  // journey slots or read as a stutter. Keep the earliest occurrence; `total` then
+  // honestly counts DISTINCT turning points.
+  const seen = new Set<string>();
+  const beats = narrativeBeats(session).filter((b) => (seen.has(b.text) ? false : (seen.add(b.text), true)));
   if (beats.length <= max) return { beats, total: beats.length, truncated: false };
   const open = beats[0];
   const close = beats[beats.length - 1];

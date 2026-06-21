@@ -209,6 +209,21 @@ describe('storyArc — the finale journey (honest highlights, never invented)', 
     const seqs = storyArc(rich(), 5).beats.map((b) => b.seq);
     expect(seqs).toEqual([...seqs].sort((a, b) => a - b));
   });
+
+  it('dedupes identical-text beats far apart (one KIND of turning point, not a stutter)', () => {
+    // two same-district errors hours apart → ONE journey line, and `total` counts distinct
+    const arc = storyArc(
+      sess([
+        ev(1, 'SESSION_START'),
+        ev(5, 'FILE_EDIT', { isError: true }), // 工坊那边失败了
+        ev(80, 'FILE_EDIT', { isError: true }), // same text, far apart (not collapsed by narrativeBeats' 12-seq window)
+        ev(120, 'AGENT_TURN_END'),
+      ]),
+      5
+    );
+    expect(arc.beats.filter((b) => b.text.includes('失败'))).toHaveLength(1);
+    expect(arc.total).toBe(3); // open + (one) error + close — distinct turning points
+  });
 });
 
 describe('beatAtSeq — the caption showing at the playhead', () => {
