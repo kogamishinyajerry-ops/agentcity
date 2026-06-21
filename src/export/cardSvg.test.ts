@@ -12,7 +12,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { synthSession, SYNTH_WISH } from '../test/synthSession.ts';
 import { computeCardProvenance } from './cardProvenance.ts';
-import { renderCardSvg } from './cardSvg.ts';
+import { renderCardSvg, wrapWish } from './cardSvg.ts';
 
 const dir = mkdtempSync(join(tmpdir(), 'ac-cardsvg-'));
 const path = join(dir, 'synth.json');
@@ -91,5 +91,51 @@ describe('renderCardSvg (作品 poster export)', () => {
     const firstBeatY = Number(svg.match(/y="(\d+)" font-size="15"[^>]*>[├└]/)?.[1]);
     expect(sealY).toBeGreaterThan(0);
     expect(firstBeatY).toBeGreaterThan(sealY); // journey is below the stamp
+  });
+});
+
+// The 认领 anchor (愿望) wraps to two lines on the card. A break that split a
+// latin token ("…极简 TU" / "I 上") would read as a typo and undermine the anchor.
+describe('wrapWish (token-safe 愿望 wrapping)', () => {
+  // a clean wrap never ends one line and starts the next BOTH on word-chars
+  const splitsAToken = (lines: string[]) =>
+    lines.slice(0, -1).some((ln, i) => {
+      const next = lines[i + 1] ?? '';
+      return /[0-9A-Za-z]$/.test(ln) && /^[0-9A-Za-z]/.test(next);
+    });
+
+  it('returns [] for an empty / whitespace wish (no orphan line)', () => {
+    expect(wrapWish('', 32)).toEqual([]);
+    expect(wrapWish('   ', 32)).toEqual([]);
+  });
+
+  it('keeps a short wish on a single line', () => {
+    expect(wrapWish('把项目迁移到极简 TUI', 32)).toEqual(['把项目迁移到极简 TUI']);
+  });
+
+  it('never splits a latin token across the wrap', () => {
+    // 「OAuth2」 straddles the per-21 hard break — it must move whole to line 2.
+    const wish = '把整个认证体系从旧框架迁移到全新的 OAuth2 PKCE 授权流程并保持兼容';
+    const lines = wrapWish(wish, 21);
+    expect(lines.length).toBe(2);
+    expect(splitsAToken(lines)).toBe(false);
+    // round-trips to the original content (modulo the collapsed break whitespace)
+    expect(lines.join('').replace(/\s/g, '')).toBe(wish.replace(/\s/g, ''));
+  });
+
+  it('still wraps pure-CJK text near the limit (any char is a clean break)', () => {
+    const wish = '重构整个渲染管线并把所有的可观察作品卡迁移到纯文本终端界面之上';
+    const lines = wrapWish(wish, 20);
+    expect(lines.length).toBe(2);
+    expect(lines[0].length).toBeLessThanOrEqual(20);
+    expect(splitsAToken(lines)).toBe(false);
+  });
+
+  it('hard-breaks a single oversized latin token rather than emitting a stub line', () => {
+    // a 40-char unbroken token can't honour the no-split rule; the floor (~60%)
+    // stops it from collapsing the line, so it breaks but stays substantial.
+    const wish = 'x'.repeat(40) + ' 收尾';
+    const lines = wrapWish(wish, 20);
+    expect(lines[0].length).toBeGreaterThanOrEqual(Math.ceil(20 * 0.6));
   });
 });

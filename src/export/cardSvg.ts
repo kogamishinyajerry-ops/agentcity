@@ -51,10 +51,14 @@ function clip(s: string, n: number): string {
 }
 
 /** Wrap an (already-clipped) wish into at most `maxLines` lines of ~`per` chars —
- *  the card's 认领 anchor reads as a full sentence, not a one-line fragment. */
-function wrapWish(s: string, per: number, maxLines = 2): string[] {
+ *  the card's 认领 anchor reads as a full sentence, not a one-line fragment. The
+ *  break never splits a latin word (so a token like "TUI" / "OAuth2" can't land
+ *  half on each line); it nudges left to the run's edge, but not past ~60% of
+ *  `per` so one long token can't shrink a line to a stub. CJK wraps at any char. */
+export function wrapWish(s: string, per: number, maxLines = 2): string[] {
   const t = s.replace(/\s+/g, ' ').trim();
   if (!t) return [];
+  const isWord = (c: string) => /[0-9A-Za-z]/.test(c);
   const lines: string[] = [];
   let rest = t;
   while (rest.length && lines.length < maxLines) {
@@ -62,8 +66,11 @@ function wrapWish(s: string, per: number, maxLines = 2): string[] {
       lines.push(rest);
       break;
     }
-    lines.push(rest.slice(0, per));
-    rest = rest.slice(per);
+    let cut = per;
+    const floor = Math.max(1, Math.ceil(per * 0.6));
+    while (cut > floor && isWord(rest[cut - 1]) && isWord(rest[cut])) cut--;
+    lines.push(rest.slice(0, cut).trimEnd());
+    rest = rest.slice(cut).trimStart();
   }
   return lines;
 }
