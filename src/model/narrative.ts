@@ -134,8 +134,9 @@ export function narrativeBeats(session: ParsedSession): NarrativeBeat[] {
  * Honesty: when there are more beats than `max`, this is a HIGHLIGHTS pick, not a
  * rewrite — the opening and closing anchors are always kept, the middle is filled by
  * the beats' significance `weight` (a compaction/error outranks a branch switch),
- * and the kept beats are shown in true seq order. `total` reports the real count so
- * a truncation can be labelled honestly ("共 N 个转折"), never silently dropped.
+ * and the kept beats are shown in true seq order. `total` reports the real count of
+ * distinct turning-point EVENTS (not the post-display-dedupe line count) so a
+ * truncation can be labelled honestly ("共 N 个转折"), never under-reported.
  */
 export interface StoryArc {
   beats: NarrativeBeat[];
@@ -144,13 +145,25 @@ export interface StoryArc {
 }
 
 export function storyArc(session: ParsedSession, max = 5): StoryArc {
-  // Dedupe identical-text beats first: a far-apart repeat (e.g. two same-district
-  // errors hours apart) is one KIND of turning point, not two — it shouldn't eat two
-  // journey slots or read as a stutter. Keep the earliest occurrence; `total` then
-  // honestly counts DISTINCT turning points.
+  // `total` is the run's TRUE distinct turning-point count. narrativeBeats has
+  // already merged genuine rapid-fire stutter (its 12-seq window), so its length is
+  // the honest number of real turning-point EVENTS. 「共 N 个转折」 reports this — it
+  // must stay faithful to the run, never to a smaller post-display count.
+  const all = narrativeBeats(session);
+  const total = all.length;
+  // For DISPLAY ONLY, collapse identical glosses so the few highlight slots aren't
+  // spent reprinting one line: several beat kinds emit a fixed gloss regardless of
+  // event identity (two dispatches both read 「派出一支小队去帮忙」; two same-district
+  // failures read alike). This never touches `total` — two distinct events that
+  // gloss the same are shown ONCE but still COUNTED twice, so the disclosed total
+  // can't under-report the run (the honesty bug a text-keyed total would cause).
   const seen = new Set<string>();
-  const beats = narrativeBeats(session).filter((b) => (seen.has(b.text) ? false : (seen.add(b.text), true)));
-  if (beats.length <= max) return { beats, total: beats.length, truncated: false };
+  const beats = all.filter((b) => (seen.has(b.text) ? false : (seen.add(b.text), true)));
+  if (beats.length <= max) {
+    // showing every distinct line, but `total` may exceed them (dedup collapsed
+    // repeats) → still label the real total so nothing is silently dropped.
+    return { beats, total, truncated: total > beats.length };
+  }
   const open = beats[0];
   const close = beats[beats.length - 1];
   const middle = beats.slice(1, -1);
@@ -158,7 +171,7 @@ export function storyArc(session: ParsedSession, max = 5): StoryArc {
     .sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0) || a.seq - b.seq)
     .slice(0, Math.max(0, max - 2));
   const picked = [open, ...kept, close].sort((a, b) => a.seq - b.seq);
-  return { beats: picked, total: beats.length, truncated: true };
+  return { beats: picked, total, truncated: true };
 }
 
 /**

@@ -210,19 +210,38 @@ describe('storyArc — the finale journey (honest highlights, never invented)', 
     expect(seqs).toEqual([...seqs].sort((a, b) => a - b));
   });
 
-  it('dedupes identical-text beats far apart (one KIND of turning point, not a stutter)', () => {
-    // two same-district errors hours apart → ONE journey line, and `total` counts distinct
+  it('collapses a repeated gloss to ONE display line but still COUNTS every distinct event', () => {
+    // two same-district failures hours apart: shown once (no stutter), but they are
+    // two real turning-point events, so `total` must count BOTH (共 4, not 共 3).
     const arc = storyArc(
       sess([
         ev(1, 'SESSION_START'),
         ev(5, 'FILE_EDIT', { isError: true }), // 工坊那边失败了
-        ev(80, 'FILE_EDIT', { isError: true }), // same text, far apart (not collapsed by narrativeBeats' 12-seq window)
+        ev(80, 'FILE_EDIT', { isError: true }), // same gloss, far apart (narrativeBeats' 12-seq window doesn't merge)
         ev(120, 'AGENT_TURN_END'),
       ]),
       5
     );
-    expect(arc.beats.filter((b) => b.text.includes('失败'))).toHaveLength(1);
-    expect(arc.total).toBe(3); // open + (one) error + close — distinct turning points
+    expect(arc.beats.filter((b) => b.text.includes('失败'))).toHaveLength(1); // display: one line
+    expect(arc.total).toBe(4); // open + 2 distinct failures + close — total stays faithful
+    expect(arc.truncated).toBe(true); // fewer lines shown than the real total → label it
+  });
+
+  it('counts two far-apart SUBAGENT_SPAWN as TWO turning points despite the shared gloss (M1)', () => {
+    // both dispatches gloss to 「派出一支小队去帮忙」; a text-keyed total would under-report
+    // them as one. The disclosed total must reflect both real events.
+    const arc = storyArc(
+      sess([
+        ev(1, 'SESSION_START'),
+        ev(3, 'SUBAGENT_SPAWN'),
+        ev(50, 'SUBAGENT_SPAWN'), // distinct event, identical gloss, far apart
+        ev(90, 'AGENT_TURN_END'),
+      ]),
+      5
+    );
+    expect(arc.beats.filter((b) => b.text.includes('小队'))).toHaveLength(1); // display: one line
+    expect(arc.total).toBe(4); // open + 2 distinct dispatches + close
+    expect(arc.truncated).toBe(true);
   });
 });
 
