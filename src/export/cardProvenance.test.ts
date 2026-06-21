@@ -93,6 +93,21 @@ describe('verifyAgainstTranscript — visible-face tampering (the binding the re
     const overlaid = svg.replace('</svg>', '<text id="ac-hero" x="60" y="252">9999</text></svg>');
     failed(overlaid, { provenance, model }, '卡面步数');
   });
+  it('catches an edited "一路走来" journey beat (whole-card gate binds un-id\'d beats)', () => {
+    // the journey beats have no per-field id — the completeness gate is their only
+    // binding, so this proves a doctored turning point can't slip through.
+    const journey = [
+      { text: '这座城开工了', drama: false },
+      { text: '🧠 记忆被压缩 —— 这座城的记忆要抹掉、重写一遍', drama: true },
+      { text: '这段记录到此结束', drama: false },
+    ];
+    const model = makeModel({ finale: { duration: '1 小时', laborSteps: 611, stats: [{ key: 'edits', value: 94 }], punchline: '', journey, journeyTotal: 9 } } as Partial<PanelModel>);
+    const provenance = makeProvenance('bytes', 'transcript-hash-1', 3, metricsFor(model));
+    const svg = renderCardSvg(model, provenance);
+    expect(svg).toContain('共 9 个转折'); // honest truncation label rendered
+    const tampered = svg.replace('这段记录到此结束', '它独自完成了不可能的任务');
+    failed(tampered, { provenance, model }, '卡面完整性');
+  });
 
   // N1/N2 (loop-auditor): the per-field id checks see only the 5 tagged elements,
   // so an EXTRA un-id'd visible <text> is invisible to them. The whole-card

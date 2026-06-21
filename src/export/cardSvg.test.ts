@@ -65,4 +65,23 @@ describe('renderCardSvg (作品 poster export)', () => {
   it('XML-escapes its text content (no raw ampersand)', () => {
     expect(/&(?!amp;|lt;|gt;|#)/.test(svg)).toBe(false);
   });
+
+  it('renders the "一路走来" journey from real beats, with an honest truncation label', () => {
+    expect(svg).toContain('一路走来');
+    // the journey beats are the model's, in order, never invented
+    for (const b of model.finale!.journey) expect(svg).toContain(b.text.slice(0, 8));
+    // a capped highlights pick must disclose the real total, never silently drop
+    if (model.finale!.journeyTotal > model.finale!.journey.length) {
+      expect(svg).toContain(`共 ${model.finale!.journeyTotal} 个转折`);
+    }
+    // the card grew past the classic 450 to fit the journey
+    expect(svg).toMatch(/height="(4[6-9]\d|[5-9]\d\d)"/);
+  });
+
+  it('keeps the verifiable seal ABOVE the journey (a bottom crop can never lose it)', () => {
+    const sealY = Number(svg.match(/y="(\d+)"[^>]*>[^<]*<tspan id="ac-dur"/)?.[1] ?? svg.match(/<text x="\d+" y="(\d+)"[^>]*><tspan id="ac-dur"/)?.[1]);
+    const firstBeatY = Number(svg.match(/y="(\d+)" font-size="15"[^>]*>[├└]/)?.[1]);
+    expect(sealY).toBeGreaterThan(0);
+    expect(firstBeatY).toBeGreaterThan(sealY); // journey is below the stamp
+  });
 });
