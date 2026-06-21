@@ -1,6 +1,6 @@
 # Still capture of the 记忆清洗 narration beat (real colours, the ④ cutscene).
-# Opens the replay parked at the compaction seq → screenshot. Re-shoot:
-#   vhs docs/shots/cutscene-shot.tape
+# Opens the committed SECRET-FREE synthetic session parked at its compaction (seq 27)
+# → screenshot. Run from the repo root: vhs docs/shots/cutscene-shot.tape
 Output docs/shots/.cutscene.gif
 
 Set Shell "zsh"
@@ -11,12 +11,12 @@ Set Height 660
 Set Padding 24
 
 Hide
-Type "cd /Users/Zhuanz/Desktop/Claude-Inner-Map && clear"
+Type "clear"
 Enter
 Sleep 400ms
 Show
 
-Type "npx tsx src/tui/cli.tsx public/sample.jsonl 798"
+Type "npx tsx src/tui/cli.tsx docs/shots/card-sample.session.json 27"
 Enter
 Sleep 4s
 Screenshot docs/shots/cutscene.png

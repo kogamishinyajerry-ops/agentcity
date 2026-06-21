@@ -1,5 +1,8 @@
-# AgentCity — feature tour (real PTY, real colours). Re-shoot:
+# AgentCity — feature tour (real PTY, real colours). Run from the repo root:
 #   vhs docs/shots/demo-tour.tape
+# Drives the committed SECRET-FREE synthetic session (docs/shots/card-sample.session.json),
+# so the recording leaks no private prompt or filename. (vhs needs a headless browser; if
+# it can't run, `npm run --silent snapshot:panel` captures the panel as text instead.)
 # A single input bar drives it: type a seq to jump, or card / export / play / ? / q.
 # Scene A — the story: open → play → 'error' fire beat → 'end' 收工 finale →
 #           'card' 作品 card → 'export' SVG (✓ 已导出).
@@ -15,13 +18,13 @@ Set Height 760
 Set Padding 24
 
 Hide
-Type "cd /Users/Zhuanz/Desktop/Claude-Inner-Map && clear"
+Type "clear"
 Enter
 Sleep 400ms
 Show
 
 # ── Scene A: the story ──────────────────────────────────────────
-Type "npx tsx src/tui/cli.tsx public/sample.jsonl"
+Type "npx tsx src/tui/cli.tsx docs/shots/card-sample.session.json"
 Enter
 Sleep 2.8s
 Enter
@@ -43,7 +46,7 @@ Enter
 Sleep 900ms
 
 # ── Scene B: the 记忆清洗 cutscene, up close ─────────────────────
-Type "npx tsx src/tui/cli.tsx public/sample.jsonl 798"
+Type "npx tsx src/tui/cli.tsx docs/shots/card-sample.session.json 27"
 Enter
 Sleep 4s
 Type "q"

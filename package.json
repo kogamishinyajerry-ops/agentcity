@@ -15,7 +15,8 @@
     "tui:card": "tsx src/tui/previewCard.tsx",
     "export:card": "tsx src/export/exportCard.ts",
     "export:replay": "tsx src/export/exportReplay.ts",
-    "verify:card": "tsx src/export/verifyCard.ts"
+    "verify:card": "tsx src/export/verifyCard.ts",
+    "snapshot:panel": "tsx src/export/panelSnapshot.tsx"
   },
   "devDependencies": {
     "@types/node": "^22.20.0",

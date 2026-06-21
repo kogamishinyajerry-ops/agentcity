@@ -25,6 +25,45 @@ A single **input bar** drives everything — type a `seq` to jump, or `card` / `
 Every number traces to a real event in the JSONL — counts are seq-accurate to the playhead and
 nothing is faked or inferred. **Red is reserved strictly for fire/error.**
 
+## What it looks like
+
+The end-state panel (the live instrument), and the one-key **作品 card** it exports:
+
+```
+ agentcity  claude-opus-4-8 · 42 分
+
+ 愿望  把这个项目从 3D 网页迁移到极简 TUI
+
+ 它替你跑了 22 步   ·   你亲手 0 步
+
+ WORKLOAD · 长度=真实调用量        seq 28/28
+ Workshop     ████████████████████████    9  改 / 写文件
+ Archive      █████████████████████▍      8  读代码 / 检索
+ Bash Yard    ██████████▋                 4  跑命令 🔥×1
+ Crew Camp    ██▋                         1  外派小队 ●
+
+ 最后一步  Crew Camp › 外派 Explore 帮手
+ 旁白  这段记录到此结束
+
+ 收工 · 42 分 0 秒   ✓ 全程真实
+
+ 一路走来  ·  共 6 个转折
+   ├ 这座城开工了
+   ├ 你说:「把这个项目从 3D 网页迁移到极简 TUI」
+   ├ 派出一支小队去帮忙
+   ├ 🧠 记忆被压缩 —— 这座城的记忆要抹掉、重写一遍
+   └ 这段记录到此结束
+
+ 人只说了要做什么 —— 剩下 22 步,它自己干完了。
+```
+
+![A verifiable 作品 card](docs/shots/card-sample-clean.png)
+
+Both are rendered from the committed **secret-free synthetic session**
+(`docs/shots/card-sample.session.json`) — never a private transcript. Regenerate the panel frame
+with `npm run --silent snapshot:panel > docs/shots/panel-sample.txt`; the colour recordings come
+from the `docs/shots/*.tape` recipes (`vhs docs/shots/demo-tour.tape`, run from the repo root).
+
 ## Run it
 
 ```bash
@@ -45,7 +84,8 @@ npm run verify:card   <card.svg|card.png> <transcript.jsonl|parsed.json>
 
 Inside the replay the input bar takes a **seq number** (jump there), `card` (the 作品 card),
 `export` (write the SVG), `play` (autoplay), `error` (next failure), `start` / `end`, `?`
-(commands), `q` (quit); `← →` step. See `docs/shots/` for recordings.
+(commands), `q` (quit); `← →` step. `docs/shots/` holds the synthetic-session card sample, the
+text panel frame, and the `*.tape` recipes for regenerating the colour recordings.
 
 Transcripts live at `~/.claude/projects/<project>/<sessionId>.jsonl`. `public/sample.jsonl` is a
 real local transcript used as the dev fixture — it is **gitignored and never shipped**.
